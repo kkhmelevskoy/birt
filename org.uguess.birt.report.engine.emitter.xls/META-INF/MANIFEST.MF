@@ -11,5 +11,6 @@ Bundle-Activator: org.uguess.birt.report.engine.emitter.xls.XlsPlugin
 Bundle-Vendor: Uguess.org
 Bundle-Localization: plugin
 Require-Bundle: org.eclipse.core.runtime,
- org.uguess.birt.report.engine.common
+ org.uguess.birt.report.engine.common,
+ org.eclipse.birt.chart.engine
 Eclipse-LazyStart: true
