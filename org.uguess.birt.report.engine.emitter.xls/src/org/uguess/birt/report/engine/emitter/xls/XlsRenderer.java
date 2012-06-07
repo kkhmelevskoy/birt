@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import com.smartxls.WorkBook;
+
 import org.apache.commons.jexl.Expression;
 import org.apache.commons.jexl.ExpressionFactory;
 import org.apache.commons.jexl.JexlContext;
@@ -185,7 +187,7 @@ public class XlsRenderer implements IAreaVisitor
 
 	private OutputStream output = null;
 
-	private HSSFWorkbook workbook;
+	private WorkBook workbook;
 
 	private XlsStyleProcessor processor;
 
@@ -624,7 +626,7 @@ public class XlsRenderer implements IAreaVisitor
 
 		this.frameStack = new Stack<Frame>( );
 
-		workbook = new HSSFWorkbook( );
+		workbook = new WorkBook();
 
 		currentPageIndex = 1;
 
@@ -698,8 +700,6 @@ public class XlsRenderer implements IAreaVisitor
 
 		try
 		{
-			processor.optimize( );
-			
 			workbook.write( output );
 
 			if ( closeStream )
@@ -707,7 +707,7 @@ public class XlsRenderer implements IAreaVisitor
 				output.close( );
 			}
 		}
-		catch ( IOException e )
+		catch ( Exception e )
 		{
 			e.printStackTrace( );
 		}
@@ -950,7 +950,7 @@ public class XlsRenderer implements IAreaVisitor
 
 				context.getVars( ).put( "pageIndex", currentPageIndex ); //$NON-NLS-1$
 				context.getVars( ).put( "sheetIndex", //$NON-NLS-1$
-						workbook.getNumberOfSheets( ) );
+						workbook.getNumSheets( ) );
 				context.getVars( )
 						.put( "rptContext", //$NON-NLS-1$
 								new ManagedReportContext( services.getReportContext( ) ) );
@@ -969,12 +969,15 @@ public class XlsRenderer implements IAreaVisitor
 		}
 
 		// default sheet name
-		return "Sheet" + workbook.getNumberOfSheets( ); //$NON-NLS-1$
+		return "Sheet" + workbook.getNumSheets( ); //$NON-NLS-1$
 	}
 
 	final protected void exportSheet( Sheet modelSheet, boolean landscape )
 	{
-		HSSFSheet xlsSheet = workbook.createSheet( );
+		int xlsSheet = workbook.getNumSheets();
+		
+		workbook.insertSheets(xlsSheet, 1);
+		
 		HSSFPatriarch patriarch = xlsSheet.createDrawingPatriarch( );
 		xlsSheet.setDisplayGridlines( showGridLines );
 
@@ -985,7 +988,7 @@ public class XlsRenderer implements IAreaVisitor
 
 		try
 		{
-			workbook.setSheetName( workbook.getNumberOfSheets( ) - 1,
+			workbook.setSheetName( workbook.getNumSheets( ) - 1,
 					getSheetName( ) );
 		}
 		catch ( Exception e )
@@ -1343,24 +1346,20 @@ public class XlsRenderer implements IAreaVisitor
 		if ( data != null )
 		{
 			int type = processor.getHssfPictureType( data );
-			if ( type != -1 )
-			{
-				return workbook.addPicture( data, type );
-			}
-			else
+			if ( type == -1 )
 			{
 				try
 				{
 					// try convert to png format
 					data = ImageUtil.convertImage( data, "png" ); //$NON-NLS-1$
-
-					return workbook.addPicture( data,
-							HSSFWorkbook.PICTURE_TYPE_PNG );
 				}
 				catch ( IOException e )
 				{
+					return -1;
 				}
 			}
+			
+			return workbook.addPicture( data ); // TODO find coords
 		}
 
 		return -1;
