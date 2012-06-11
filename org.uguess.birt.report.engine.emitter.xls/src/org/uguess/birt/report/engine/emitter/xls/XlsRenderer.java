@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import com.smartxls.RangeStyle;
+
 import com.smartxls.WorkBook;
 
 import org.apache.commons.jexl.Expression;
@@ -1145,7 +1147,7 @@ public class XlsRenderer implements IAreaVisitor
 			useHyperLinkStyle = handleHyperLink( (IArea) cellValue, cell );
 		}
 
-		HSSFCellStyle cellStyle = processor.getHssfCellStyle( element.getStyle( ),
+		RangeStyle cellStyle = processor.getCellStyle( element.getStyle( ),
 				useHyperLinkStyle );
 
 		cell.setCellStyle( cellStyle );
