@@ -35,11 +35,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-
+import com.smartxls.ShapeFormat;
+import com.smartxls.PictureShape;
+import com.smartxls.HyperLink;
 import com.smartxls.RangeStyle;
-
 import com.smartxls.WorkBook;
-
 import org.apache.commons.jexl.Expression;
 import org.apache.commons.jexl.ExpressionFactory;
 import org.apache.commons.jexl.JexlContext;
@@ -89,17 +89,6 @@ import org.apache.commons.jexl.parser.ASTWhileStatement;
 import org.apache.commons.jexl.parser.Parser;
 import org.apache.commons.jexl.parser.ParserVisitor;
 import org.apache.commons.jexl.parser.SimpleNode;
-import org.apache.poi.hssf.usermodel.HSSFCell;
-import org.apache.poi.hssf.usermodel.HSSFCellStyle;
-import org.apache.poi.hssf.usermodel.HSSFClientAnchor;
-import org.apache.poi.hssf.usermodel.HSSFComment;
-import org.apache.poi.hssf.usermodel.HSSFHyperlink;
-import org.apache.poi.hssf.usermodel.HSSFPatriarch;
-import org.apache.poi.hssf.usermodel.HSSFRichTextString;
-import org.apache.poi.hssf.usermodel.HSSFRow;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.util.CellRangeAddress;
 import org.eclipse.birt.report.engine.api.IHTMLActionHandler;
 import org.eclipse.birt.report.engine.api.IRenderOption;
 import org.eclipse.birt.report.engine.api.IReportRunnable;
@@ -195,7 +184,7 @@ public class XlsRenderer implements IAreaVisitor
 
 	protected Stack<Frame> frameStack;
 
-	protected Set<HSSFCell> totalCells;
+	protected Set<XlsCell> totalCells;
 
 	protected Set<IArea> totalPageAreas;
 
@@ -976,16 +965,28 @@ public class XlsRenderer implements IAreaVisitor
 
 	final protected void exportSheet( Sheet modelSheet, boolean landscape )
 	{
+		try 
+		{
+			doExportSheet(modelSheet, landscape);
+		}
+		catch (Exception e) 
+		{
+			throw new RuntimeException(e);
+		}
+	}
+	
+	private void doExportSheet( Sheet modelSheet, boolean landscape ) throws Exception 
+	{
 		int xlsSheet = workbook.getNumSheets();
 		
 		workbook.insertSheets(xlsSheet, 1);
+		workbook.setSheet(xlsSheet);
 		
-		HSSFPatriarch patriarch = xlsSheet.createDrawingPatriarch( );
-		xlsSheet.setDisplayGridlines( showGridLines );
+		workbook.setShowGridLines( showGridLines );
 
 		if ( landscape )
 		{
-			xlsSheet.getPrintSetup( ).setLandscape( true );
+			workbook.setPrintLandscape( true );
 		}
 
 		try
@@ -1048,26 +1049,23 @@ public class XlsRenderer implements IAreaVisitor
 			width = modelSheet.getColumnWidth( i - 1 )
 					/ ( 1000 * baseCharWidth );
 
-			xlsSheet.setColumnWidth( (short) ( i - 1 ), (short) ( width * 256 ) );
+			workbook.setColWidth( i - 1 , (short) ( width * 256 ) );
 		}
 
-		HSSFCellStyle emptyCellStyle = processor.getEmptyCellStyle( );
-		HSSFCell emptyCell = null;
+		RangeStyle emptyCellStyle = processor.getEmptyCellStyle( );
 		for ( short y = 0; y < rowCount; y++ )
 		{
 			if ( !removeEmptyRow || nonBlankRow[y] )
 			{
-				HSSFRow xlsRow = xlsSheet.createRow( y );
 				double height = modelSheet.getRowHeight( y ) / 1000d;// + 2;
 
 				// System.out.println( "row height " + y + ": " + height );
 
-				xlsRow.setHeightInPoints( (float) height );
+				workbook.setRowHeight( y, (int) height );
 
 				for ( short x = 0; x < columnCount; x++ )
 				{
-					emptyCell = xlsRow.createCell( x );
-					emptyCell.setCellStyle( emptyCellStyle );
+					workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
 
 					Cell element = modelSheet.getCell( y, x, false );
 					if ( element != null )
@@ -1077,33 +1075,23 @@ public class XlsRenderer implements IAreaVisitor
 								x,
 								y,
 								xlsSheet,
-								patriarch,
-								xlsRow,
 								modelSheet );
-					}
-					else
-					{
-						emptyCell = xlsRow.createCell( x );
-						emptyCell.setCellStyle( emptyCellStyle );
 					}
 				}
 			}
 			else
 			{
-				HSSFRow row = xlsSheet.createRow( y );
-				row.setHeight( (short) 0 );
+				workbook.setRowHeight( y, 0 );
 				for ( short x = 0; x < columnCount; x++ )
 				{
-					emptyCell = row.createCell( x );
-					emptyCell.setCellStyle( emptyCellStyle );
+					workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
 				}
 			}
 		}
 	}
 
 	protected void exportCell( Cell element, short x, short y,
-			HSSFSheet xlsSheet, HSSFPatriarch patriarch, HSSFRow xlsRow,
-			Sheet modelSheet )
+			int xlsSheet, Sheet modelSheet ) throws Exception
 	{
 		if ( element.isEmpty( ) )
 		{
@@ -1126,10 +1114,10 @@ public class XlsRenderer implements IAreaVisitor
 					{
 						x2 = (short) ( x + merge.getColumnSpan( ) );
 						y2 = (short) ( y + merge.getRowSpan( ) );
-						xlsSheet.addMergedRegion( new CellRangeAddress( y,
-								y2,
-								x,
-								x2 ) );
+						
+						RangeStyle rangeStyle = workbook.getRangeStyle(y, x, y2, x2);
+						rangeStyle.setMergeCells(true);
+						workbook.setRangeStyle(rangeStyle, y, x, y2, x2);
 
 						break;
 					}
@@ -1137,11 +1125,11 @@ public class XlsRenderer implements IAreaVisitor
 			}
 		}
 
-		HSSFCell cell = xlsRow.createCell( x );
-
 		Object cellValue = getTranslatedElementValue( element.getValue( ) );
 		boolean useHyperLinkStyle = false;
 
+		XlsCell cell = new XlsCell(workbook.getSheet(), x, y, x2, y2 );
+		
 		if ( cellValue instanceof ITextArea )
 		{
 			useHyperLinkStyle = handleHyperLink( (IArea) cellValue, cell );
@@ -1150,9 +1138,9 @@ public class XlsRenderer implements IAreaVisitor
 		RangeStyle cellStyle = processor.getCellStyle( element.getStyle( ),
 				useHyperLinkStyle );
 
-		cell.setCellStyle( cellStyle );
+		workbook.setRangeStyle( cellStyle, y, x, y2, x2 );
 
-		exportCellData( element, x, y, x2, y2, cell, patriarch );
+		exportCellData( element, cell );
 	}
 
 	protected Object getTranslatedElementValue( Object value )
@@ -1160,14 +1148,13 @@ public class XlsRenderer implements IAreaVisitor
 		return value;
 	}
 
-	protected void exportCellData( Cell element, short x, short y, short x2,
-			short y2, HSSFCell cell, HSSFPatriarch patriarch )
+	protected void exportCellData( Cell element, XlsCell cell) throws Exception
 	{
 		if ( isTotalPageArea( element.getValue( ) ) )
 		{
 			if ( totalCells == null )
 			{
-				totalCells = new HashSet<HSSFCell>( );
+				totalCells = new HashSet<XlsCell>( );
 			}
 			totalCells.add( cell );
 		}
@@ -1176,7 +1163,7 @@ public class XlsRenderer implements IAreaVisitor
 
 		if ( cellValue instanceof IImageArea )
 		{
-			exportImage( (IImageArea) cellValue, cell, x, y, x2, y2, patriarch );
+			exportImage( (IImageArea) cellValue, cell );
 		}
 		else if ( cellValue instanceof ITextArea )
 		{
@@ -1185,40 +1172,32 @@ public class XlsRenderer implements IAreaVisitor
 
 		if ( enableComments && cellValue instanceof IArea )
 		{
-			handleComments( (IArea) cellValue, cell, patriarch );
+			handleComments( (IArea) cellValue, cell );
 		}
 	}
 
-	protected void exportImage( IImageArea image, HSSFCell cell, short x,
-			short y, short x2, short y2, HSSFPatriarch patriarch )
+	protected void exportImage( IImageArea image, XlsCell cell) throws Exception
 	{
-		int idx = loadPicture( image );
+		PictureShape shape = loadPicture(image, cell);
 
-		if ( idx != -1 )
+		if ( shape != null )
 		{
-			HSSFClientAnchor anchor = new HSSFClientAnchor( 0,
-					0,
-					0,
-					0,
-					x,
-					y,
-					(short) ( x2 + 1 ),
-					y2 + 1 );
-			anchor.setAnchorType( 2 );
-			patriarch.createPicture( anchor, idx );
+			ShapeFormat format = shape.getFormat();
+			format.setPlacementStyle(ShapeFormat.PlacementMove);
+			shape.setFormat();
 		}
 		else if ( !suppressUnknownImage )
 		{
-			cell.setCellValue( new HSSFRichTextString( "<<Unsupported Image>>" ) ); //$NON-NLS-1$
+			workbook.setText( cell.y, cell.x, "<<Unsupported Image>>" ); //$NON-NLS-1$
 		}
 	}
 
-	protected void exportText( ITextArea text, HSSFCell cell )
+	protected void exportText( ITextArea text, XlsCell cell ) throws Exception
 	{
 		exportText( text.getText( ), cell );
 	}
 
-	protected void exportText( String csCellText, HSSFCell cell )
+	protected void exportText( String csCellText, XlsCell cell ) throws Exception
 	{
 		Double csNumberValue = null;
 
@@ -1233,15 +1212,15 @@ public class XlsRenderer implements IAreaVisitor
 
 		if ( csNumberValue == null || csNumberValue.isNaN( ) )
 		{
-			cell.setCellValue( new HSSFRichTextString( csCellText ) );
+			workbook.setText(cell.sheet, cell.y, cell.x, csCellText );
 		}
 		else
 		{
-			cell.setCellValue( csNumberValue );
+			workbook.setNumber(cell.sheet, cell.y, cell.x,  csNumberValue );
 		}
 	}
 
-	protected boolean handleHyperLink( IArea area, HSSFCell cell )
+	protected boolean handleHyperLink( IArea area, XlsCell cell )
 	{
 		IHyperlinkAction hlAction = area.getAction( );
 
@@ -1272,13 +1251,7 @@ public class XlsRenderer implements IAreaVisitor
 
 				if ( link != null )
 				{
-					HSSFHyperlink hssflink = new HSSFHyperlink( HSSFHyperlink.LINK_URL );
-					hssflink.setAddress( link );
-					if ( tooltip != null )
-					{
-						hssflink.setLabel( tooltip );
-					}
-					cell.setHyperlink( hssflink );
+					workbook.addHyperlink(cell.y, cell.x, cell.y2, cell.x2, link, HyperLink.kURLAbs, tooltip);
 
 					return true;
 				}
@@ -1294,8 +1267,7 @@ public class XlsRenderer implements IAreaVisitor
 		return false;
 	}
 
-	protected boolean handleComments( IArea area, HSSFCell cell,
-			HSSFPatriarch patriarch )
+	protected boolean handleComments( IArea area, XlsCell cell ) throws Exception
 	{
 		IContent content = contentCache.get( area );
 
@@ -1312,18 +1284,8 @@ public class XlsRenderer implements IAreaVisitor
 					String comments = ( (ReportElementHandle) sourceObj ).getComments( );
 
 					if ( comments != null && comments.length( ) > 0 )
-					{
-						HSSFComment hssfcomment = patriarch.createComment( new HSSFClientAnchor( 0,
-								0,
-								0,
-								0,
-								(short) commentsAnchorColumnIndex,
-								commentsAnchorRowIndex,
-								(short) ( commentsAnchorColumnIndex + COMMENTS_WIDTH_IN_COLUMN ),
-								commentsAnchorRowIndex + COMMENTS_HEIGHT_IN_ROW ) );
-						hssfcomment.setString( new HSSFRichTextString( comments ) );
-
-						cell.setCellComment( hssfcomment );
+					{						
+						workbook.addComment(cell.y, cell.x, comments, null);
 
 						return true;
 					}
@@ -1334,7 +1296,7 @@ public class XlsRenderer implements IAreaVisitor
 		return false;
 	}
 
-	protected int loadPicture( IImageArea imageArea )
+	protected PictureShape loadPicture( IImageArea imageArea, XlsCell cell ) throws Exception
 	{
 		byte[] data = imageArea.getImageData( );
 
@@ -1347,7 +1309,7 @@ public class XlsRenderer implements IAreaVisitor
 
 		if ( data != null )
 		{
-			int type = processor.getHssfPictureType( data );
+			int type = processor.getPictureType( data );
 			if ( type == -1 )
 			{
 				try
@@ -1357,14 +1319,14 @@ public class XlsRenderer implements IAreaVisitor
 				}
 				catch ( IOException e )
 				{
-					return -1;
+					return null;
 				}
 			}
 			
-			return workbook.addPicture( data ); // TODO find coords
+			return workbook.addPicture( cell.x, cell.y, cell.x2 + 1, cell.y2 + 1, data );
 		}
 
-		return -1;
+		return null;
 	}
 
 	private byte[] loadPictureData( String url )
@@ -1467,11 +1429,18 @@ public class XlsRenderer implements IAreaVisitor
 		{
 			String text = totalPage.getText( );
 
-			for ( Iterator<HSSFCell> itr = totalCells.iterator( ); itr.hasNext( ); )
+			for ( Iterator<XlsCell> itr = totalCells.iterator( ); itr.hasNext( ); )
 			{
-				HSSFCell cell = itr.next( );
+				XlsCell cell = itr.next( );
 
-				exportText( text, cell );
+				try 
+				{
+					exportText( text, cell );
+				} 
+				catch (Exception e) 
+				{
+					throw new RuntimeException(e);
+				}
 			}
 		}
 	}
@@ -1495,5 +1464,64 @@ public class XlsRenderer implements IAreaVisitor
 
 		// System.out.println(frame);
 	}
+	
+	
+	/**
+	 * Represents cell on xls sheet.
+	 */
+	private static class XlsCell {
 
+		/**
+		 * x, y - top left column and row
+		 * x2, y2 - bottom right column and row
+		 */
+		final int x, y, x2, y2;
+		
+		/**
+		 * Sheet number in workbook
+		 */
+		final int sheet;
+		
+		XlsCell(int sheet, int x, int y, int x2, int y2) {
+			this.sheet = sheet;
+			this.x = x;
+			this.y = y;
+			this.x2 = x2;
+			this.y2 = y2;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + sheet;
+			result = prime * result + x;
+			result = prime * result + x2;
+			result = prime * result + y;
+			result = prime * result + y2;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			XlsCell other = (XlsCell) obj;
+			if (sheet != other.sheet)
+				return false;
+			if (x != other.x)
+				return false;
+			if (x2 != other.x2)
+				return false;
+			if (y != other.y)
+				return false;
+			if (y2 != other.y2)
+				return false;
+			return true;
+		}
+	}
 }
