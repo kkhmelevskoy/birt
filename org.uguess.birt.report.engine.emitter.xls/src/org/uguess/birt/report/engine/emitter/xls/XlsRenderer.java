@@ -1064,6 +1064,8 @@ public class XlsRenderer implements IAreaVisitor
 
 				// System.out.println( "row height " + y + ": " + height );
 
+				height *= 16; // s.vladykin: empirical coefficient
+				
 				workbook.setRowHeight( y, (int) height );
 
 				for ( short x = 0; x < columnCount; x++ )
