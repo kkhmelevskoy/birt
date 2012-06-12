@@ -29,7 +29,6 @@ import java.util.Map.Entry;
 
 import com.smartxls.RangeStyle;
 import com.smartxls.WorkBook;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.eclipse.birt.report.engine.css.engine.value.css.CSSConstants;
 import org.uguess.birt.report.engine.layout.wrapper.Style;
@@ -85,7 +84,7 @@ public class XlsStyleProcessor
 	 * @param hssfColorIndex
 	 * @return
 	 */
-	private int rgb( short hssfColorIndex ) {
+	private int rgb( int hssfColorIndex ) {
 		HSSFColor color = hssfColorMap.get( hssfColorIndex );
 		
 		short[] t = color.getTriplet();
@@ -133,7 +132,7 @@ public class XlsStyleProcessor
 		return emptyCellStyle;
 	}
 
-	public int getHssfPictureType( byte[] data )
+	public int getPictureType( byte[] data )
 	{
 		int type = ImageUtil.getImageType( data );
 
@@ -141,11 +140,11 @@ public class XlsStyleProcessor
 		{
 			// there are no such constants in smartxls but these are correct
 			case ImageUtil.TYPE_DIB :
-				return HSSFWorkbook.PICTURE_TYPE_DIB;
+				return 7; //HSSFWorkbook.PICTURE_TYPE_DIB;
 			case ImageUtil.TYPE_PNG :
-				return HSSFWorkbook.PICTURE_TYPE_PNG;
+				return 6; //HSSFWorkbook.PICTURE_TYPE_PNG;
 			case ImageUtil.TYPE_JPEG :
-				return HSSFWorkbook.PICTURE_TYPE_JPEG;
+				return 5; //HSSFWorkbook.PICTURE_TYPE_JPEG;
 		}
 
 		return -1;
