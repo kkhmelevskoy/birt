@@ -179,6 +179,8 @@ public class XlsRenderer implements IAreaVisitor
 	private OutputStream output = null;
 
 	private WorkBook workbook;
+	
+	private int sheetNum = -1;
 
 	private XlsStyleProcessor processor;
 
@@ -977,10 +979,11 @@ public class XlsRenderer implements IAreaVisitor
 	
 	private void doExportSheet( Sheet modelSheet, boolean landscape ) throws Exception 
 	{
-		int xlsSheet = workbook.getNumSheets();
-		
-		workbook.insertSheets(xlsSheet, 1);
-		workbook.setSheet(xlsSheet);
+		if (++sheetNum > 0)
+		{		
+			workbook.insertSheets(sheetNum, 1);
+			workbook.setSheet(sheetNum);
+		}
 		
 		workbook.setShowGridLines( showGridLines );
 
@@ -1074,7 +1077,6 @@ public class XlsRenderer implements IAreaVisitor
 						exportCell( element,
 								x,
 								y,
-								xlsSheet,
 								modelSheet );
 					}
 				}
@@ -1090,8 +1092,7 @@ public class XlsRenderer implements IAreaVisitor
 		}
 	}
 
-	protected void exportCell( Cell element, short x, short y,
-			int xlsSheet, Sheet modelSheet ) throws Exception
+	protected void exportCell( Cell element, short x, short y, Sheet modelSheet ) throws Exception
 	{
 		if ( element.isEmpty( ) )
 		{
