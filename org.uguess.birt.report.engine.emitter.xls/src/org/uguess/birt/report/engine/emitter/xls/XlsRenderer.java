@@ -693,6 +693,8 @@ public class XlsRenderer implements IAreaVisitor
 
 		try
 		{
+			workbook.setSheet(0); // activate first sheet in report
+			
 			workbook.write( output );
 
 			if ( closeStream )
