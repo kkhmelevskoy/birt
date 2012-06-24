@@ -315,8 +315,9 @@ public class XlsStyleProcessor
 
 		String fontName = style.getFontFamily( ) == null ? "Serif" //$NON-NLS-1$
 				: style.getFontFamily( );
-		short fontSize = style.getFontSize( ) == 0 ? 10
-				: (short) ( style.getFontSize( ) / 1000d );
+		int fontSize = style.getFontSize( ) == 0 ? 10
+				: style.getFontSize( ) / 50; // s.vladykin: magic font scale constant
+		
 		short underline = useLinkStyle ? ( RangeStyle.UnderlineSingle )
 				: ( style.isTextUnderline( ) ? RangeStyle.UnderlineSingle 
 						: RangeStyle.UnderlineNone );
