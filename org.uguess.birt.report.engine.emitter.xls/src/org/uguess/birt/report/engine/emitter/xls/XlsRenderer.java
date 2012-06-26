@@ -1057,7 +1057,8 @@ public class XlsRenderer implements IAreaVisitor
 			workbook.setColWidth( i - 1 , (short) ( width * 256 ) );
 		}
 
-		RangeStyle emptyCellStyle = processor.getEmptyCellStyle( );
+		RangeStyle emptyCellStyle = processor.getEmptyCellStyle( false );
+		
 		for ( short y = 0; y < rowCount; y++ )
 		{
 			if ( !removeEmptyRow || nonBlankRow[y] )
@@ -1072,7 +1073,18 @@ public class XlsRenderer implements IAreaVisitor
 
 				for ( short x = 0; x < columnCount; x++ )
 				{
-					workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
+					System.out.println("> " + y + " " + x);
+					
+					try 
+					{
+						workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
+					} 
+					catch(Exception e) 
+					{
+						System.out.println("err");
+						
+						continue;
+					}
 
 					Cell element = modelSheet.getCell( y, x, false );
 					if ( element != null )
@@ -1090,6 +1102,8 @@ public class XlsRenderer implements IAreaVisitor
 				workbook.setRowHeight( y, 0 );
 				for ( short x = 0; x < columnCount; x++ )
 				{
+					System.out.println(">> " + y + " " + x);
+					
 					workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
 				}
 			}
@@ -1106,6 +1120,8 @@ public class XlsRenderer implements IAreaVisitor
 		short x2 = x;
 		short y2 = y;
 
+		boolean merged = false;
+		
 		if ( element.isMerged( ) )
 		{
 			Iterator<MergeBlock> it = modelSheet.mergesIterator( );
@@ -1120,9 +1136,7 @@ public class XlsRenderer implements IAreaVisitor
 						x2 = (short) ( x + merge.getColumnSpan( ) );
 						y2 = (short) ( y + merge.getRowSpan( ) );
 						
-						RangeStyle rangeStyle = workbook.getRangeStyle(y, x, y2, x2);
-						rangeStyle.setMergeCells(true);
-						workbook.setRangeStyle(rangeStyle, y, x, y2, x2);
+						merged = true;
 
 						break;
 					}
@@ -1141,8 +1155,10 @@ public class XlsRenderer implements IAreaVisitor
 		}
 
 		RangeStyle cellStyle = processor.getCellStyle( element.getStyle( ),
-				useHyperLinkStyle );
-
+				useHyperLinkStyle, merged );
+		
+		System.out.println("<< " + y + " " + x + " - " + y2 + " " + x2);
+		
 		workbook.setRangeStyle( cellStyle, y, x, y2, x2 );
 
 		exportCellData( element, cell );

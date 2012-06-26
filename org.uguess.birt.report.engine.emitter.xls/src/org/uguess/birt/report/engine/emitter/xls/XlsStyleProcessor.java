@@ -50,30 +50,29 @@ public class XlsStyleProcessor
 	private WorkBook workbook;
 
 	private RangeStyle emptyCellStyle;
+	
+	private RangeStyle emptyCellStyleMerged;
 
 	private Map<?, HSSFColor> hssfColorMap;
-
-	private Map<Style, RangeStyle[]> styleCache;
 
 	@SuppressWarnings("unchecked")
 	XlsStyleProcessor( WorkBook workbook )
 	{
 		this.workbook = workbook;
 
-		this.styleCache = new HashMap<Style, RangeStyle[]>( );
 		this.hssfColorMap = HSSFColor.getIndexHash( );
 
-		initEmptyCellStyle( );
+		emptyCellStyle = initEmptyCellStyle( false );
+		emptyCellStyleMerged = initEmptyCellStyle( true );
 	}
 
 	public void dispose( )
 	{
-		styleCache.clear( );
 		hssfColorMap.clear( );
 
-		styleCache = null;
 		hssfColorMap = null;
 		emptyCellStyle = null;
+		emptyCellStyleMerged = null;
 
 		workbook = null;
 	}
@@ -92,8 +91,10 @@ public class XlsStyleProcessor
 		return (t[0] << 16) | (t[1] << 8) | t[2];  
 	}
 	
-	private void initEmptyCellStyle( )
+	private RangeStyle initEmptyCellStyle( boolean merged )
 	{
+		RangeStyle emptyCellStyle;
+		
 		try {
 			emptyCellStyle = workbook.getRangeStyle();
 		} catch (Exception e) {
@@ -125,11 +126,18 @@ public class XlsStyleProcessor
 		emptyCellStyle.setFontName( "Serif" ); //$NON-NLS-1$
 		short size = 10;
 		emptyCellStyle.setFontSize( size );
+		
+		if ( merged )
+		{
+			emptyCellStyle.setMergeCells( true );
+		}
+		
+		return emptyCellStyle;
 	}
 
-	public RangeStyle getEmptyCellStyle( )
+	public RangeStyle getEmptyCellStyle( boolean merged )
 	{
-		return emptyCellStyle;
+		return merged ? emptyCellStyleMerged : emptyCellStyle;
 	}
 
 	public int getPictureType( byte[] data )
@@ -150,29 +158,13 @@ public class XlsStyleProcessor
 		return -1;
 	}
 
-	public RangeStyle getCellStyle( Style style, boolean useLinkStyle )
+	public RangeStyle getCellStyle( Style style, boolean useLinkStyle, boolean merged )
 	{
 		RangeStyle hssfStyle = null;
 
 		if ( style == null || style.isEmpty( ) )
 		{
-			return emptyCellStyle;
-		}
-
-		RangeStyle[] styleEntry = null;
-
-		// check existing cell style cache first.
-		for ( Iterator<Entry<Style, RangeStyle[]>> itr = styleCache.entrySet( )
-				.iterator( ); itr.hasNext( ); )
-		{
-			Entry<Style, RangeStyle[]> entry = itr.next( );
-
-			if ( style.equals( entry.getKey( ) ) )
-			{
-				styleEntry = entry.getValue( );
-				hssfStyle = styleEntry[useLinkStyle ? 1 : 0];
-				break;
-			}
+			return getEmptyCellStyle( merged );
 		}
 
 		if ( hssfStyle == null )
@@ -181,6 +173,11 @@ public class XlsStyleProcessor
 				hssfStyle = workbook.getRangeStyle( );
 			} catch (Exception e) {
 				throw new RuntimeException(e);
+			}
+			
+			if ( merged ) 
+			{
+				hssfStyle.setMergeCells( true );
 			}
 
 			Color[] colorFlag = new Color[6];
@@ -282,18 +279,6 @@ public class XlsStyleProcessor
 			// hssfStyle.setDataFormat( builtInFormat );
 			// }
 			// }
-
-			if ( styleEntry == null )
-			{
-				styleEntry = new RangeStyle[2];
-				styleEntry[useLinkStyle ? 1 : 0] = hssfStyle;
-
-				styleCache.put( style, styleEntry );
-			}
-			else
-			{
-				styleEntry[useLinkStyle ? 1 : 0] = hssfStyle;
-			}
 		}
 		return hssfStyle;
 	}
