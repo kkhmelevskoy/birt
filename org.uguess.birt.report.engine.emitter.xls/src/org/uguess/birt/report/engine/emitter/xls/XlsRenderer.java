@@ -21,93 +21,26 @@
 
 package org.uguess.birt.report.engine.emitter.xls;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.StringReader;
+import java.io.*;
 import java.net.URL;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import com.smartxls.ShapeFormat;
-import com.smartxls.PictureShape;
-import com.smartxls.HyperLink;
-import com.smartxls.RangeStyle;
-import com.smartxls.WorkBook;
+import java.util.*;
+
+import com.smartxls.*;
 import org.apache.commons.jexl.Expression;
 import org.apache.commons.jexl.ExpressionFactory;
 import org.apache.commons.jexl.JexlContext;
 import org.apache.commons.jexl.JexlHelper;
-import org.apache.commons.jexl.parser.ASTAddNode;
-import org.apache.commons.jexl.parser.ASTAndNode;
-import org.apache.commons.jexl.parser.ASTArrayAccess;
-import org.apache.commons.jexl.parser.ASTAssignment;
-import org.apache.commons.jexl.parser.ASTBitwiseAndNode;
-import org.apache.commons.jexl.parser.ASTBitwiseComplNode;
-import org.apache.commons.jexl.parser.ASTBitwiseOrNode;
-import org.apache.commons.jexl.parser.ASTBitwiseXorNode;
-import org.apache.commons.jexl.parser.ASTBlock;
-import org.apache.commons.jexl.parser.ASTDivNode;
-import org.apache.commons.jexl.parser.ASTEQNode;
-import org.apache.commons.jexl.parser.ASTEmptyFunction;
-import org.apache.commons.jexl.parser.ASTExpression;
-import org.apache.commons.jexl.parser.ASTExpressionExpression;
-import org.apache.commons.jexl.parser.ASTFalseNode;
-import org.apache.commons.jexl.parser.ASTFloatLiteral;
-import org.apache.commons.jexl.parser.ASTForeachStatement;
-import org.apache.commons.jexl.parser.ASTGENode;
-import org.apache.commons.jexl.parser.ASTGTNode;
-import org.apache.commons.jexl.parser.ASTIdentifier;
-import org.apache.commons.jexl.parser.ASTIfStatement;
-import org.apache.commons.jexl.parser.ASTIntegerLiteral;
-import org.apache.commons.jexl.parser.ASTJexlScript;
-import org.apache.commons.jexl.parser.ASTLENode;
-import org.apache.commons.jexl.parser.ASTLTNode;
-import org.apache.commons.jexl.parser.ASTMethod;
-import org.apache.commons.jexl.parser.ASTModNode;
-import org.apache.commons.jexl.parser.ASTMulNode;
-import org.apache.commons.jexl.parser.ASTNENode;
-import org.apache.commons.jexl.parser.ASTNotNode;
-import org.apache.commons.jexl.parser.ASTNullLiteral;
-import org.apache.commons.jexl.parser.ASTOrNode;
-import org.apache.commons.jexl.parser.ASTReference;
-import org.apache.commons.jexl.parser.ASTReferenceExpression;
-import org.apache.commons.jexl.parser.ASTSizeFunction;
-import org.apache.commons.jexl.parser.ASTSizeMethod;
-import org.apache.commons.jexl.parser.ASTStatementExpression;
-import org.apache.commons.jexl.parser.ASTStringLiteral;
-import org.apache.commons.jexl.parser.ASTSubtractNode;
-import org.apache.commons.jexl.parser.ASTTrueNode;
-import org.apache.commons.jexl.parser.ASTUnaryMinusNode;
-import org.apache.commons.jexl.parser.ASTWhileStatement;
-import org.apache.commons.jexl.parser.Parser;
-import org.apache.commons.jexl.parser.ParserVisitor;
-import org.apache.commons.jexl.parser.SimpleNode;
+import org.apache.commons.jexl.parser.*;
 import org.eclipse.birt.report.engine.api.IHTMLActionHandler;
 import org.eclipse.birt.report.engine.api.IRenderOption;
 import org.eclipse.birt.report.engine.api.IReportRunnable;
 import org.eclipse.birt.report.engine.api.RenderOption;
 import org.eclipse.birt.report.engine.api.impl.Action;
-import org.eclipse.birt.report.engine.content.IAutoTextContent;
-import org.eclipse.birt.report.engine.content.IContent;
-import org.eclipse.birt.report.engine.content.IHyperlinkAction;
-import org.eclipse.birt.report.engine.content.IPageContent;
-import org.eclipse.birt.report.engine.content.IReportContent;
+import org.eclipse.birt.report.engine.content.*;
 import org.eclipse.birt.report.engine.content.impl.PageContent;
 import org.eclipse.birt.report.engine.emitter.IEmitterServices;
 import org.eclipse.birt.report.engine.ir.ReportElementDesign;
-import org.eclipse.birt.report.engine.nLayout.area.IArea;
-import org.eclipse.birt.report.engine.nLayout.area.IAreaVisitor;
-import org.eclipse.birt.report.engine.nLayout.area.IContainerArea;
-import org.eclipse.birt.report.engine.nLayout.area.IImageArea;
-import org.eclipse.birt.report.engine.nLayout.area.ITemplateArea;
-import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
+import org.eclipse.birt.report.engine.nLayout.area.*;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
@@ -1071,9 +1004,9 @@ public class XlsRenderer implements IAreaVisitor
 				
 				workbook.setRowHeight( y, (int) height );
 
-				for ( short x = 0; x < columnCount; x++ )
+				top: for ( short x = 0; x < columnCount; x++ )
 				{
-					System.out.println("> " + y + " " + x);
+					System.out.println("set empty " + y + " " + x);
 					
 					try 
 					{
@@ -1081,19 +1014,9 @@ public class XlsRenderer implements IAreaVisitor
 					} 
 					catch(Exception e) 
 					{
-						System.out.println("err");
+						e.printStackTrace();
 						
 						continue;
-					}
-
-					Cell element = modelSheet.getCell( y, x, false );
-					if ( element != null )
-					{
-
-						exportCell( element,
-								x,
-								y,
-								modelSheet );
 					}
 				}
 			}
@@ -1102,25 +1025,58 @@ public class XlsRenderer implements IAreaVisitor
 				workbook.setRowHeight( y, 0 );
 				for ( short x = 0; x < columnCount; x++ )
 				{
-					System.out.println(">> " + y + " " + x);
+					System.out.println("empty " + y + " " + x);
 					
 					workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
 				}
 			}
 		}
+		
+		List<MergeBlock> merged = new ArrayList<MergeBlock>();
+		
+		for ( short y = 0; y < rowCount; y++ )
+		{
+			if ( !removeEmptyRow || nonBlankRow[y] )
+			{
+				top: for ( short x = 0; x < columnCount; x++ )
+				{
+					Cell element = modelSheet.getCell( y, x, false );
+					if ( element != null )
+					{
+						for (MergeBlock m : merged) 
+						{
+							if ( m.include( y, x ) ) 
+							{
+								continue top;
+							}
+						}
+			
+						MergeBlock mb = exportCell( element,
+								x,
+								y,
+								modelSheet );
+						
+						if ( mb != null ) 
+						{
+							merged.add( mb );
+						}
+					}
+				}
+			}
+		}
 	}
-
-	protected void exportCell( Cell element, short x, short y, Sheet modelSheet ) throws Exception
+	
+	protected MergeBlock exportCell( Cell element, short x, short y, Sheet modelSheet ) throws Exception
 	{
 		if ( element.isEmpty( ) )
 		{
-			return;
+			return null;
 		}
 
 		short x2 = x;
 		short y2 = y;
 
-		boolean merged = false;
+		MergeBlock mb = null;
 		
 		if ( element.isMerged( ) )
 		{
@@ -1136,7 +1092,8 @@ public class XlsRenderer implements IAreaVisitor
 						x2 = (short) ( x + merge.getColumnSpan( ) );
 						y2 = (short) ( y + merge.getRowSpan( ) );
 						
-						merged = true;
+						if ( x != x2 || y != y2 )
+							mb = merge;
 
 						break;
 					}
@@ -1155,13 +1112,18 @@ public class XlsRenderer implements IAreaVisitor
 		}
 
 		RangeStyle cellStyle = processor.getCellStyle( element.getStyle( ),
-				useHyperLinkStyle, merged );
+				useHyperLinkStyle, mb != null);
 		
-		System.out.println("<< " + y + " " + x + " - " + y2 + " " + x2);
-		
+		if (mb != null)
+			System.out.println("exp " + y + " " + x + " - " + y2 + " " + x2);
+		else 
+			System.out.println("exp " + y + " " + x );
+			
 		workbook.setRangeStyle( cellStyle, y, x, y2, x2 );
 
 		exportCellData( element, cell );
+		
+		return mb;
 	}
 
 	protected Object getTranslatedElementValue( Object value )
