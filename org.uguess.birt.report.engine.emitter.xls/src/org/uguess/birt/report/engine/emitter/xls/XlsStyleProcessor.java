@@ -27,6 +27,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.uguess.birt.report.engine.spreadsheet.model.Cell;
+import org.uguess.birt.report.engine.spreadsheet.model.Sheet;
+
+import org.uguess.birt.report.engine.spreadsheet.model.MergeBlock;
+
 import com.smartxls.RangeStyle;
 import com.smartxls.WorkBook;
 import org.apache.poi.hssf.util.HSSFColor;
@@ -158,13 +163,15 @@ public class XlsStyleProcessor
 		return -1;
 	}
 
-	public RangeStyle getCellStyle( Style style, boolean useLinkStyle, boolean merged )
+	public RangeStyle getCellStyle( Cell element, short x, short y, Sheet modelSheet, boolean useLinkStyle, MergeBlock merge )
 	{
+		Style style = element.getStyle();
+		
 		RangeStyle hssfStyle = null;
 
 		if ( style == null || style.isEmpty( ) )
 		{
-			return getEmptyCellStyle( merged );
+			return getEmptyCellStyle( merge != null );
 		}
 
 		if ( hssfStyle == null )
@@ -175,7 +182,7 @@ public class XlsStyleProcessor
 				throw new RuntimeException(e);
 			}
 			
-			if ( merged ) 
+			if ( merge != null ) 
 			{
 				hssfStyle.setMergeCells( true );
 			}
@@ -194,7 +201,7 @@ public class XlsStyleProcessor
 				hssfStyle.setPatternBG( rgb( cdx ) );
 				hssfStyle.setPatternFG( rgb( cdx ) );
 			}
-
+			
 			if ( style.getLeftBorderStyle( ) != null
 					&& !"none".equals( style.getLeftBorderStyle( ) ) ) //$NON-NLS-1$
 			{
@@ -212,20 +219,48 @@ public class XlsStyleProcessor
 					}
 				}
 			}
-			if ( style.getRightBorderStyle( ) != null
-					&& !"none".equals( style.getRightBorderStyle( ) ) ) //$NON-NLS-1$
+			if ( style.getRightBorderStyle( ) != null)
 			{
-				hssfStyle.setRightBorder( getBorder( style.getRightBorderWidth( ),
-						style.getRightBorderStyle( ) ) );
-
-				if ( hssfStyle.getRightBorder( ) != RangeStyle.BorderNone )
+				if ( !"none".equals( style.getRightBorderStyle( ) ) ) //$NON-NLS-1$
 				{
-					color = style.getRightBorderColor( );
-					if ( color != null )
+					hssfStyle.setRightBorder( getBorder( style.getRightBorderWidth( ),
+							style.getRightBorderStyle( ) ) );
+	
+					if ( hssfStyle.getRightBorder( ) != RangeStyle.BorderNone )
 					{
-						hssfStyle.setRightBorderColor( rgb( getHssfColorIndex( color,
-								colorFlag,
-								INDEX_BORDER_RIGHT ) ) );
+						color = style.getRightBorderColor( );
+						if ( color != null )
+						{
+							hssfStyle.setRightBorderColor( rgb( getHssfColorIndex( color,
+									colorFlag,
+									INDEX_BORDER_RIGHT ) ) );
+						}
+					}
+				}
+			}
+			else if (merge != null)
+			{
+				Cell c = modelSheet.getCell(merge.getEndRow(), merge.getEndColumn(), false);
+				
+				if (c != null) 
+				{
+					Style s = c.getStyle();
+					
+					if (s != null && !s.isEmpty() && !"none".equals( s.getRightBorderStyle( ) ) ) //$NON-NLS-1$
+					{
+						hssfStyle.setRightBorder( getBorder( s.getRightBorderWidth( ),
+								s.getRightBorderStyle( ) ) );
+		
+						if ( hssfStyle.getRightBorder( ) != RangeStyle.BorderNone )
+						{
+							color = s.getRightBorderColor( );
+							if ( color != null )
+							{
+								hssfStyle.setRightBorderColor( rgb( getHssfColorIndex( color,
+										colorFlag,
+										INDEX_BORDER_RIGHT ) ) );
+							}
+						}
 					}
 				}
 			}

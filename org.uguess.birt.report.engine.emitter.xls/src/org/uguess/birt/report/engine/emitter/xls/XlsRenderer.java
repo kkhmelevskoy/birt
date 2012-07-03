@@ -1003,36 +1003,28 @@ public class XlsRenderer implements IAreaVisitor
 				height *= 20; // s.vladykin: magic empirical coefficient
 				
 				workbook.setRowHeight( y, (int) height );
-
-				top: for ( short x = 0; x < columnCount; x++ )
-				{
-					System.out.println("set empty " + y + " " + x);
-					
-					try 
-					{
-						workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
-					} 
-					catch(Exception e) 
-					{
-						e.printStackTrace();
-						
-						continue;
-					}
-				}
 			}
 			else
 			{
 				workbook.setRowHeight( y, 0 );
-				for ( short x = 0; x < columnCount; x++ )
+			}
+			
+			for ( short x = 0; x < columnCount; x++ )
+			{
+				try 
 				{
-					System.out.println("empty " + y + " " + x);
-					
 					workbook.setRangeStyle( emptyCellStyle, y, x, y, x );
+				} 
+				catch(Exception e) 
+				{
+					e.printStackTrace();
+					
+					continue;
 				}
 			}
 		}
 		
-		List<MergeBlock> merged = new ArrayList<MergeBlock>();
+		Deque<MergeBlock> merged = new LinkedList<MergeBlock>();
 		
 		for ( short y = 0; y < rowCount; y++ )
 		{
@@ -1058,7 +1050,7 @@ public class XlsRenderer implements IAreaVisitor
 						
 						if ( mb != null ) 
 						{
-							merged.add( mb );
+							merged.addFirst( mb );
 						}
 					}
 				}
@@ -1111,14 +1103,9 @@ public class XlsRenderer implements IAreaVisitor
 			useHyperLinkStyle = handleHyperLink( (IArea) cellValue, cell );
 		}
 
-		RangeStyle cellStyle = processor.getCellStyle( element.getStyle( ),
-				useHyperLinkStyle, mb != null);
+		RangeStyle cellStyle = processor.getCellStyle( element, x, y, modelSheet,
+				useHyperLinkStyle, mb );
 		
-		if (mb != null)
-			System.out.println("exp " + y + " " + x + " - " + y2 + " " + x2);
-		else 
-			System.out.println("exp " + y + " " + x );
-			
 		workbook.setRangeStyle( cellStyle, y, x, y2, x2 );
 
 		exportCellData( element, cell );
