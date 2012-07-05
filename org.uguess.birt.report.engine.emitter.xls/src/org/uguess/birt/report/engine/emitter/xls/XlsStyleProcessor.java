@@ -34,7 +34,6 @@ import org.uguess.birt.report.engine.spreadsheet.model.MergeBlock;
 
 import com.smartxls.RangeStyle;
 import com.smartxls.WorkBook;
-import org.apache.poi.hssf.util.HSSFColor;
 import org.eclipse.birt.report.engine.css.engine.value.css.CSSConstants;
 import org.uguess.birt.report.engine.layout.wrapper.Style;
 import org.uguess.birt.report.engine.util.ImageUtil;
@@ -58,14 +57,10 @@ public class XlsStyleProcessor
 	
 	private RangeStyle emptyCellStyleMerged;
 
-	private Map<?, HSSFColor> hssfColorMap;
-
 	@SuppressWarnings("unchecked")
 	XlsStyleProcessor( WorkBook workbook )
 	{
 		this.workbook = workbook;
-
-		this.hssfColorMap = HSSFColor.getIndexHash( );
 
 		emptyCellStyle = initEmptyCellStyle( false );
 		emptyCellStyleMerged = initEmptyCellStyle( true );
@@ -73,27 +68,10 @@ public class XlsStyleProcessor
 
 	public void dispose( )
 	{
-		hssfColorMap.clear( );
-
-		hssfColorMap = null;
 		emptyCellStyle = null;
 		emptyCellStyleMerged = null;
 
 		workbook = null;
-	}
-
-	/**
-	 * Convert from HSSF color index to ARGB for SmartXLS
-	 * 
-	 * @param hssfColorIndex
-	 * @return
-	 */
-	private int rgb( int hssfColorIndex ) {
-		HSSFColor color = hssfColorMap.get( hssfColorIndex );
-		
-		short[] t = color.getTriplet();
-		
-		return (t[0] << 16) | (t[1] << 8) | t[2];  
 	}
 	
 	private RangeStyle initEmptyCellStyle( boolean merged )
@@ -118,14 +96,14 @@ public class XlsStyleProcessor
 		emptyCellStyle.setTopBorder( RangeStyle.BorderNone  ); 
 		emptyCellStyle.setBottomBorder( RangeStyle.BorderNone  );
 
-		short backColorIndex = HSSFColor.BLACK.index;
-		emptyCellStyle.setBottomBorderColor( rgb(backColorIndex) );
-		emptyCellStyle.setTopBorderColor( rgb(backColorIndex) );
-		emptyCellStyle.setLeftBorderColor( rgb(backColorIndex) );
-		emptyCellStyle.setRightBorderColor( rgb(backColorIndex) );
+		Color backColor = Color.BLACK;
+		emptyCellStyle.setBottomBorderColor( backColor.getRGB() );
+		emptyCellStyle.setTopBorderColor( backColor.getRGB() );
+		emptyCellStyle.setLeftBorderColor( backColor.getRGB() );
+		emptyCellStyle.setRightBorderColor( backColor.getRGB() );
 		
-		emptyCellStyle.setPatternFG( rgb(HSSFColor.WHITE.index) );
-		emptyCellStyle.setPatternBG( rgb(HSSFColor.WHITE.index) );
+		emptyCellStyle.setPatternFG( Color.WHITE.getRGB() );
+		emptyCellStyle.setPatternBG( Color.WHITE.getRGB() );
 		emptyCellStyle.setVerticalAlignment( RangeStyle.VerticalAlignmentCenter );
 
 		emptyCellStyle.setFontName( "Serif" ); //$NON-NLS-1$
@@ -194,12 +172,9 @@ public class XlsStyleProcessor
 			Color color = style.getBackgroundColor( );
 			if ( color != null )
 			{
-				short cdx = getHssfColorIndex( color,
-						colorFlag,
-						INDEX_BACKGROUND );
 				hssfStyle.setPattern( RangeStyle.PatternSolid );
-				hssfStyle.setPatternBG( rgb( cdx ) );
-				hssfStyle.setPatternFG( rgb( cdx ) );
+				hssfStyle.setPatternBG( color.getRGB() );
+				hssfStyle.setPatternFG( color.getRGB() );
 			}
 			
 			if ( style.getLeftBorderStyle( ) != null
@@ -213,9 +188,7 @@ public class XlsStyleProcessor
 					color = style.getLeftBorderColor( );
 					if ( color != null )
 					{
-						hssfStyle.setLeftBorderColor( rgb( getHssfColorIndex( color,
-								colorFlag,
-								INDEX_BORDER_LEFT ) ) );
+						hssfStyle.setLeftBorderColor( color.getRGB() );
 					}
 				}
 			}
@@ -231,9 +204,7 @@ public class XlsStyleProcessor
 						color = style.getRightBorderColor( );
 						if ( color != null )
 						{
-							hssfStyle.setRightBorderColor( rgb( getHssfColorIndex( color,
-									colorFlag,
-									INDEX_BORDER_RIGHT ) ) );
+							hssfStyle.setRightBorderColor( color.getRGB() );
 						}
 					}
 				}
@@ -256,9 +227,7 @@ public class XlsStyleProcessor
 							color = s.getRightBorderColor( );
 							if ( color != null )
 							{
-								hssfStyle.setRightBorderColor( rgb( getHssfColorIndex( color,
-										colorFlag,
-										INDEX_BORDER_RIGHT ) ) );
+								hssfStyle.setRightBorderColor( color.getRGB() );
 							}
 						}
 					}
@@ -275,9 +244,7 @@ public class XlsStyleProcessor
 					color = style.getTopBorderColor( );
 					if ( color != null )
 					{
-						hssfStyle.setTopBorderColor( rgb( getHssfColorIndex( color,
-								colorFlag,
-								INDEX_BORDER_TOP ) ) );
+						hssfStyle.setTopBorderColor( color.getRGB() );
 					}
 				}
 			}
@@ -292,9 +259,7 @@ public class XlsStyleProcessor
 					color = style.getBottomBorderColor( );
 					if ( color != null )
 					{
-						hssfStyle.setBottomBorderColor( rgb( getHssfColorIndex( color,
-								colorFlag,
-								INDEX_BORDER_BOTTOM ) ) );
+						hssfStyle.setBottomBorderColor( color.getRGB() );
 					}
 				}
 			}
@@ -321,16 +286,15 @@ public class XlsStyleProcessor
 	private void setFont( Style style, boolean useLinkStyle,
 			Color[] colorFlag, RangeStyle cellStyle )
 	{
-		short forecolor;
+		Color forecolor;
 		if ( useLinkStyle )
 		{
-			forecolor = HSSFColor.BLUE.index;
+			forecolor = Color.BLUE;
 		}
 		else
 		{
 			Color color = style.getColor( );
-			forecolor = color == null ? HSSFColor.BLACK.index
-					: getHssfColorIndex( color, colorFlag, INDEX_FONT );
+			forecolor = color == null ? Color.BLACK : color;
 		}
 
 		String fontName = style.getFontFamily( ) == null ? "Serif" //$NON-NLS-1$
@@ -347,61 +311,12 @@ public class XlsStyleProcessor
 
 
 		cellStyle.setFontName( fontName );
-		cellStyle.setFontColor( rgb ( forecolor ) );
+		cellStyle.setFontColor( forecolor.getRGB() );
 		cellStyle.setFontSize( fontSize );
 		cellStyle.setFontUnderline( underline );
 		cellStyle.setFontStrikeout( strikeout );
 		cellStyle.setFontBold( boldweight );
 		cellStyle.setFontItalic( italic );
-	}
-
-	private short getHssfColorIndex( Color awtColor, Color[] colorFlag,
-			int colorIndex )
-	{
-		HSSFColor color = null;
-
-		if ( hssfColorMap != null && hssfColorMap.size( ) > 0 )
-		{
-			HSSFColor crtColor = null;
-			short[] rgb = null;
-			int diff = 0;
-			int minDiff = 999;
-
-			for ( Iterator<HSSFColor> it = hssfColorMap.values( ).iterator( ); it.hasNext( ); )
-			{
-				crtColor = it.next( );
-				rgb = crtColor.getTriplet( );
-
-				if ( rgb[0] == awtColor.getRed( )
-						&& rgb[1] == awtColor.getGreen( )
-						&& rgb[2] == awtColor.getBlue( ) )
-				{
-					// precise match
-					diff = -Integer.MAX_VALUE;
-					color = crtColor;
-					break;
-				}
-				else
-				{
-
-					diff = Math.abs( rgb[0] - awtColor.getRed( ) )
-							+ Math.abs( rgb[1] - awtColor.getGreen( ) )
-							+ Math.abs( rgb[2] - awtColor.getBlue( ) );
-
-					if ( diff < minDiff )
-					{
-						minDiff = diff;
-						color = crtColor;
-					}
-				}
-			}
-		}
-
-		if ( color != null )
-		{
-			return color.getIndex( );
-		}
-		return HSSFColor.WHITE.index;
 	}
 
 	private short getBorder( int borderWidth, String borderStyle )
