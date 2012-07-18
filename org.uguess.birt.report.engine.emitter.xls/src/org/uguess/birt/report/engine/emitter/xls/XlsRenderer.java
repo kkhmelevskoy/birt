@@ -1046,7 +1046,8 @@ public class XlsRenderer implements IAreaVisitor
 						MergeBlock mb = exportCell( element,
 								x,
 								y,
-								modelSheet );
+								modelSheet,
+								sheetNum);
 						
 						if ( mb != null ) 
 						{
@@ -1058,7 +1059,7 @@ public class XlsRenderer implements IAreaVisitor
 		}
 	}
 	
-	protected MergeBlock exportCell( Cell element, short x, short y, Sheet modelSheet ) throws Exception
+	protected MergeBlock exportCell( Cell element, short x, short y, Sheet modelSheet, int sheet ) throws Exception
 	{
 		if ( element.isEmpty( ) )
 		{
@@ -1096,7 +1097,7 @@ public class XlsRenderer implements IAreaVisitor
 		Object cellValue = getTranslatedElementValue( element.getValue( ) );
 		boolean useHyperLinkStyle = false;
 
-		XlsCell cell = new XlsCell(workbook.getSheet(), x, y, x2, y2 );
+		XlsCell cell = new XlsCell(sheet, x, y, x2, y2 );
 		
 		if ( cellValue instanceof ITextArea )
 		{
