@@ -21,13 +21,16 @@
 
 package org.uguess.birt.report.engine.spreadsheet.wrapper;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.birt.report.engine.css.engine.StyleConstants;
+import org.eclipse.birt.report.engine.nLayout.area.IArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.CellArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.TableArea;
+import org.uguess.birt.report.engine.emitter.xls.XlsRenderer2.AreaWrapper;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.Style;
 import org.uguess.birt.report.engine.layout.wrapper.impl.LocalStyle;
@@ -35,10 +38,6 @@ import org.uguess.birt.report.engine.spreadsheet.model.Cell;
 import org.uguess.birt.report.engine.spreadsheet.model.Sheet;
 import org.uguess.birt.report.engine.spreadsheet.model.impl.SheetImpl;
 
-
-/**
- * This class is used to transform from a frame to a sheet.
- */
 public class Transformer
 {
 
@@ -173,6 +172,32 @@ public class Transformer
         computeFragments(xCuts, yCuts, element, 0, 0);
     }
 
+    private IArea getArea(Frame frame)
+    {
+        if (frame == null)
+        {
+            return null;
+        }
+
+        Object data = frame.getData();
+        if (data instanceof List)
+        {
+            data = ((List<?>) data).get(0);
+        }
+
+        IArea area = null;
+        if (data instanceof AreaWrapper)
+        {
+            area = ((AreaWrapper) data).getArea();
+        }
+        else if (data instanceof IArea)
+        {
+            area = (IArea) data;
+        }
+
+        return area;
+    }
+
     private void computeFragments(List<Integer> xCuts, List<Integer> yCuts,
         Frame element, int xOffset, int yOffset)
     {
@@ -220,9 +245,23 @@ public class Transformer
             yCuts.add(cut);
         }
 
-        for (Iterator<Frame> it = element.iterator(); it.hasNext();)
+        IArea area = getArea(element);
+        if (area instanceof TableArea)
         {
-            computeFragments(xCuts, yCuts, it.next(), xOffset, yOffset);
+            TableArea tableArea = (TableArea) area;
+            System.out.println(tableArea.isCanShrink());
+            System.out.println(tableArea.isGridDesign());
+            System.out.println(tableArea.isIgnoreReordering());
+            System.out.println(tableArea.isInlineStacking());
+            
+        }
+        if (!(area instanceof CellArea))
+        {
+            for (Iterator<Frame> it = element.iterator(); it.hasNext();)
+            {
+                Frame frame = it.next();
+                computeFragments(xCuts, yCuts, frame, xOffset, yOffset);
+            }
         }
     }
 
@@ -551,6 +590,8 @@ public class Transformer
         return coords;
     }
 
+    private Coordinate cellCoordinate;
+
     private void layoutChildren(List<Integer> xCuts, List<Integer> yCuts,
         Sheet sheet, Cell defaultCell, Frame parentElement, Style currentStyle,
         int xOffset, int yOffset)
@@ -562,9 +603,22 @@ public class Transformer
         for (Iterator<Frame> it = parentElement.iterator(); it.hasNext();)
         {
             element = it.next();
+            IArea area = getArea(element);
 
-            coord = getElementCoords(xCuts, yCuts, element, xOffset, yOffset,
-                sheet, defaultCell);
+            if (cellCoordinate != null)
+            {
+                coord = cellCoordinate;
+            }
+            else
+            {
+                coord = getElementCoords(xCuts, yCuts, element, xOffset,
+                    yOffset, sheet, defaultCell);
+            }
+            
+            if (area instanceof CellArea)
+            {
+                cellCoordinate = coord;
+            }
 
             // skip zero size element.
             if (coord == null)
@@ -629,8 +683,8 @@ public class Transformer
                         sheet.setCell(coord.y1, coord.x1, data);
                     }
                 }
-
             }
+            cellCoordinate = null;
         }
     }
 

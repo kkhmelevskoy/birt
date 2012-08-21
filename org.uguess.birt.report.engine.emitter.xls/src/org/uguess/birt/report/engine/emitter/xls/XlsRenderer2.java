@@ -411,18 +411,23 @@ public class XlsRenderer2 extends XlsRenderer
     /**
      * AreaWrapper
      */
-    static class AreaWrapper implements IArea
+    public static class AreaWrapper implements IArea
     {
 
         protected IArea area;
         private int x, y;
 
-        AreaWrapper(IArea area)
+        public AreaWrapper(IArea area)
         {
             this.area = area;
 
             x = area.getX();
             y = area.getY();
+        }
+
+        public IArea getArea()
+        {
+            return area;
         }
 
         public void accept(IAreaVisitor visitor)

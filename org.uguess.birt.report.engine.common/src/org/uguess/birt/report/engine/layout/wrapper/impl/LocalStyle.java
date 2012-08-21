@@ -156,7 +156,7 @@ public final class LocalStyle implements Style
 			case StyleConstants.STYLE_BORDER_RIGHT_COLOR :
 			case StyleConstants.STYLE_BORDER_RIGHT_STYLE :
 			case StyleConstants.STYLE_BORDER_RIGHT_WIDTH :
-				return false;
+				return true;
 		}
 
 		return true;
