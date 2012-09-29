@@ -703,7 +703,8 @@ public class XlsRenderer implements IAreaVisitor
                 }
                 catch (Exception e)
                 {
-                    throw new RuntimeException(e);
+                	System.err.println(i);
+                    e.printStackTrace();
                 }
             }
         }
@@ -1253,7 +1254,7 @@ public class XlsRenderer implements IAreaVisitor
             SeriesDefinition xSeriesDefinition = xAxis.getSeriesDefinitions()
                 .get(0);
             Series xSeries = xSeriesDefinition.getRunTimeSeries().get(0);
-            Number[] xPoints = (Number[]) xSeries.getDataSet().getValues();
+            Object[] xPoints = (Object[]) xSeries.getDataSet().getValues();
             int pointCount = xPoints.length;
 
             // Записываем y оси
@@ -1307,7 +1308,7 @@ public class XlsRenderer implements IAreaVisitor
                 workbook.setRangeStyle(rangeStyle, row, 0, row, yAxisCount);
                 row++;
 
-                Number[] x = xPoints;
+                Object[] x = xPoints;
                 Number[] y = yPoints.get(i);
                 String xRange = workbook.formatRCNr(row, 0, false) + ":";
                 String yRange = workbook.formatRCNr(row, column, false)
@@ -1316,7 +1317,7 @@ public class XlsRenderer implements IAreaVisitor
                 {
                     if (y[j] != null)
                     {
-                        workbook.setNumber(row, 0, x[j].doubleValue());
+                        workbook.setNumber(row, 0, j);
                         workbook.setNumber(row, column, y[j].doubleValue());
                         row++;
                     }
