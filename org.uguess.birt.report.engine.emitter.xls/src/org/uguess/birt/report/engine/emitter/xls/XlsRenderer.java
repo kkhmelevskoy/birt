@@ -1259,7 +1259,7 @@ public class XlsRenderer implements IAreaVisitor
         SeriesDefinition xSeriesDefinition = xAxis.getSeriesDefinitions()
             .get(0);
         Series xSeries = xSeriesDefinition.getRunTimeSeries().get(0);
-        Object[] xPoints = (Object[]) xSeries.getDataSet().getValues();
+        double[] xPoints = toDoubles((Object[]) xSeries.getDataSet().getValues());
         int pointCount = xPoints.length;
 
         // Записываем y оси
@@ -1283,8 +1283,6 @@ public class XlsRenderer implements IAreaVisitor
                     ySerieses.add(ySeries);
                     
                     Object values = ySeries.getDataSet().getValues();
-                    
-//                    System.out.println(values.getClass());
                     
                     yPoints.add(toDoubles((Object[]) values));
                 }
@@ -1317,16 +1315,16 @@ public class XlsRenderer implements IAreaVisitor
             workbook.setRangeStyle(rangeStyle, row, 0, row, yAxisCount);
             row++;
 
-            Object[] x = xPoints;
+            double[] x = xPoints;
             double[] y = yPoints.get(i);
             String xRange = workbook.formatRCNr(row, 0, false) + ":";
             String yRange = workbook.formatRCNr(row, column, false)
                 + ":";
             for (int j = 0; j < pointCount; j++)
             {
-                if (y[j] != Double.NaN)
+                if (y[j] != Double.NaN && x[j] != Double.NaN)
                 {
-                    workbook.setNumber(row, 0, j);
+                    workbook.setNumber(row, 0, x[j]);
                     workbook.setNumber(row, column, y[j]);
                     row++;
                 }
