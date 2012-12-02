@@ -1289,7 +1289,7 @@ public class XlsRenderer implements IAreaVisitor
         
         if ("Line Chart".equals(chartType))
         {
-        	type = ChartShape.Scatter;
+        	type = ChartShape.Line;
         }
         else if ("Bar Chart".equals(chartType)) 
         {
@@ -1298,6 +1298,10 @@ public class XlsRenderer implements IAreaVisitor
         else if ("Area Chart".equals(chartType)) 
         {
         	type = ChartShape.Area;
+        }
+        else if ("Scatter Chart".equals(chartType))
+        {
+        	type = ChartShape.Scatter;
         }
         else 
         {
@@ -1333,6 +1337,8 @@ public class XlsRenderer implements IAreaVisitor
         int yAxises = 0;
         int col = 0;
         int seriesLen = 0;
+        ArrayList<Integer> seriesYAxises = new ArrayList<Integer>();
+        ArrayList<String> seriesNames = new ArrayList<String>();
         
         for (Axis axis : allAxes)
         {
@@ -1364,8 +1370,12 @@ public class XlsRenderer implements IAreaVisitor
                     
                     for (int i = 0; i < values.length; i++) 
                     {
-                    	if (!writeChartValue(workbook, 2 + i, col, values[i]) && type == ChartShape.Scatter)
-                    		type = ChartShape.Line;
+                    	writeChartValue(workbook, 2 + i, col, values[i]);
+                    }
+                    
+                    if (col != 0) {
+                    	seriesYAxises.add(yAxises);
+                    	seriesNames.add(seriesTitle);
                     }
                     
                     col++;
@@ -1393,8 +1403,29 @@ public class XlsRenderer implements IAreaVisitor
         
         chart.setChartType(type);
 
-        chart.setLinkRange(sheetName + "!" + workbook.formatRCNr(1, 0, false) + ":" + 
-        		workbook.formatRCNr(1 + seriesLen, 1 + allAxes.size(), false) ,false);
+        String xFormula = sheetName + "!" + workbook.formatRCNr(2, 0, true) + ":" + 
+        		workbook.formatRCNr(1 + seriesLen, 0, true);
+
+        if (chart.getChartType() != ChartShape.Scatter && chart.getChartType() != ChartShape.Bubble) 
+        	chart.setCategoryFormula(xFormula);
+        
+        for (int i = 1; i < col; i++) {
+        	String yFormula = sheetName + "!" + workbook.formatRCNr(2, i, true) + ":" + 
+	        		workbook.formatRCNr(1 + seriesLen, i, true);
+	        
+	        int series = i - 1;
+        	
+        	chart.addSeries();
+        	if (type == ChartShape.Scatter || type == ChartShape.Bubble) { 
+        		chart.setSeriesXValueFormula(series, xFormula);
+        	}
+        	
+	        chart.setSeriesYValueFormula(series, yFormula);
+	        
+	        chart.setSeriesYAxisIndex(series, seriesYAxises.get(series) - 1);
+	        
+	        chart.setSeriesName(series, seriesNames.get(series));
+        }
         /*
         for (int i = 0; i < ySeriesCount; i++)
         {
