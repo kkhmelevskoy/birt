@@ -1284,8 +1284,10 @@ public class XlsRenderer implements IAreaVisitor
     	
         Chart chartModel = generatedChartState.getChartModel();
         String chartType = chartModel.getType();
+        String chartSubType = chartModel.getSubType();
         
         short type;
+        boolean stacked = false;
         
         if ("Line Chart".equals(chartType))
         {
@@ -1294,6 +1296,8 @@ public class XlsRenderer implements IAreaVisitor
         else if ("Bar Chart".equals(chartType)) 
         {
         	type = ChartShape.Column;
+        	
+        	stacked = "Stacked".equals(chartSubType);
         }
         else if ("Area Chart".equals(chartType)) 
         {
@@ -1406,9 +1410,6 @@ public class XlsRenderer implements IAreaVisitor
         String xFormula = sheetName + "!" + workbook.formatRCNr(2, 0, true) + ":" + 
         		workbook.formatRCNr(1 + seriesLen, 0, true);
 
-        if (chart.getChartType() != ChartShape.Scatter && chart.getChartType() != ChartShape.Bubble) 
-        	chart.setCategoryFormula(xFormula);
-        
         for (int i = 1; i < col; i++) {
         	String yFormula = sheetName + "!" + workbook.formatRCNr(2, i, true) + ":" + 
 	        		workbook.formatRCNr(1 + seriesLen, i, true);
@@ -1426,6 +1427,16 @@ public class XlsRenderer implements IAreaVisitor
 	        
 	        chart.setSeriesName(series, seriesNames.get(series));
         }
+        
+        if (chart.getChartType() != ChartShape.Scatter && chart.getChartType() != ChartShape.Bubble) 
+        	chart.setCategoryFormula(xFormula);
+
+        if (stacked) {
+        	chart.setPlotStacked(true);
+        	chart.setBarGapRatio(-100);
+        }
+
+        
         /*
         for (int i = 0; i < ySeriesCount; i++)
         {
