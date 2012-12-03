@@ -35,6 +35,10 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.util.*;
 
+import org.eclipse.birt.chart.model.attribute.Anchor;
+
+import org.eclipse.birt.chart.model.layout.Legend;
+
 import org.apache.commons.jexl.Expression;
 import org.apache.commons.jexl.ExpressionFactory;
 import org.apache.commons.jexl.JexlContext;
@@ -1270,6 +1274,33 @@ public class XlsRenderer implements IAreaVisitor
     	return title;
     }
     
+    private static boolean legendVisisble(Legend legend) {
+    	return legend != null;
+    }
+    
+    private static short legendPosition(Legend legend) {
+    	switch (legend.getAnchor()) {
+			case NORTH_EAST_LITERAL:
+				return ChartShape.LegendPlacementBottomLeftCorner;
+			case EAST_LITERAL:
+				return ChartShape.LegendPlacementLeft;
+			case SOUTH_EAST_LITERAL:
+				return ChartShape.LegendPlacementTopLeftCorner;
+			case SOUTH_LITERAL:
+				return ChartShape.LegendPlacementTop;
+			case SOUTH_WEST_LITERAL:
+				return ChartShape.LegendPlacementTopRightCorner;
+			case WEST_LITERAL:
+				return ChartShape.LegendPlacementRight;
+			case NORTH_WEST_LITERAL:
+				return ChartShape.LegendPlacementBottomRightCorner;
+			case NORTH_LITERAL:
+				return ChartShape.LegendPlacementBottom;
+		}
+    	
+    	return ChartShape.LegendPlacementBottom;
+    }
+    
     private void exportChart(int chartIndex, GeneratedChartState generatedChartState,
         XlsCell cell) throws Exception
     {
@@ -1436,6 +1467,12 @@ public class XlsRenderer implements IAreaVisitor
         	chart.setBarGapRatio(-100);
         }
 
+        Legend legend = chartWithAxes.getLegend();
+        
+        if (legendVisisble(legend))
+        	chart.setLegendPosition(legendPosition(legend));
+        else
+        	chart.setLegendVisible(false);
         
         /*
         for (int i = 0; i < ySeriesCount; i++)
