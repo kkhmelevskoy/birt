@@ -35,6 +35,8 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.util.*;
 
+import org.eclipse.birt.chart.model.type.BarSeries;
+
 import org.eclipse.birt.chart.model.attribute.Anchor;
 
 import org.eclipse.birt.chart.model.layout.Legend;
@@ -1374,6 +1376,9 @@ public class XlsRenderer implements IAreaVisitor
         int seriesLen = 0;
         ArrayList<Integer> seriesYAxises = new ArrayList<Integer>();
         ArrayList<String> seriesNames = new ArrayList<String>();
+        ArrayList<Color> seriesColors = new ArrayList<Color>();
+        ArrayList<Series> ySerieses = new ArrayList<Series>();
+        ArrayList<SeriesDefinition> ySeriesDefinitions = new ArrayList<SeriesDefinition>();
         
         for (Axis axis : allAxes)
         {
@@ -1385,6 +1390,8 @@ public class XlsRenderer implements IAreaVisitor
         	
         	if (col != 0)
         		yAxises++;
+        	else if (axis.getType() == AxisType.LOGARITHMIC_LITERAL)
+        		chart.setLogScale(true);
         	
         	int beginCol = col;
         	
@@ -1411,6 +1418,8 @@ public class XlsRenderer implements IAreaVisitor
                     if (col != 0) {
                     	seriesYAxises.add(yAxises);
                     	seriesNames.add(seriesTitle);
+                    	ySeriesDefinitions.add(seriesDefinition);
+                    	ySerieses.add(series);
                     }
                     
                     col++;
@@ -1441,52 +1450,28 @@ public class XlsRenderer implements IAreaVisitor
         String xFormula = sheetName + "!" + workbook.formatRCNr(2, 0, true) + ":" + 
         		workbook.formatRCNr(1 + seriesLen, 0, true);
 
-        for (int i = 1; i < col; i++) {
-        	String yFormula = sheetName + "!" + workbook.formatRCNr(2, i, true) + ":" + 
-	        		workbook.formatRCNr(1 + seriesLen, i, true);
+        for (int x = 1; x < col; x++) {
+        	String yFormula = sheetName + "!" + workbook.formatRCNr(2, x, true) + ":" + 
+	        		workbook.formatRCNr(1 + seriesLen, x, true);
 	        
-	        int series = i - 1;
+	        int series = x - 1;
         	
         	chart.addSeries();
-        	if (type == ChartShape.Scatter || type == ChartShape.Bubble) { 
-        		chart.setSeriesXValueFormula(series, xFormula);
-        	}
         	
+        	if (type == ChartShape.Scatter || type == ChartShape.Bubble)
+        		chart.setSeriesXValueFormula(series, xFormula);
 	        chart.setSeriesYValueFormula(series, yFormula);
 	        
 	        chart.setSeriesYAxisIndex(series, seriesYAxises.get(series) - 1);
 	        
 	        chart.setSeriesName(series, seriesNames.get(series));
-        }
-        
-        if (chart.getChartType() != ChartShape.Scatter && chart.getChartType() != ChartShape.Bubble) 
-        	chart.setCategoryFormula(xFormula);
-
-        if (stacked) {
-        	chart.setPlotStacked(true);
-        	chart.setBarGapRatio(-100);
-        }
-
-        Legend legend = chartWithAxes.getLegend();
-        
-        if (legendVisisble(legend))
-        	chart.setLegendPosition(legendPosition(legend));
-        else
-        	chart.setLegendVisible(false);
-        
-        /*
-        for (int i = 0; i < ySeriesCount; i++)
-        {
-            chart.addSeries();
+	        
+			Series ySeries = ySerieses.get(series);
+            SeriesDefinition ySeriesDefinition = ySeriesDefinitions.get(series);
             
-            if (chart.getChartType() == ChartShape.Scatter)
-            	chart.setSeriesXValueFormula(i, sheetName + "!" + xRanges[i]);
-            	
-            chart.setSeriesYValueFormula(i, sheetName + "!" + yRanges[i]);
-            chart.setSeriesYAxisIndex(i, yAxisIndexes.get(i));
-
-            Series ySeries = ySerieses.get(i);
-            SeriesDefinition ySeriesDefinition = ySeriesDefinitions.get(i);
+            try {
+            ChartFormat seriesFormat = chart.getSeriesFormat(series);
+            
             if (ySeries instanceof LineSeries)
             {
                 LineSeries yLineSeries = (LineSeries) ySeries;
@@ -1494,9 +1479,8 @@ public class XlsRenderer implements IAreaVisitor
                     .indexOf(ySeries);
                 EList<Marker> markers = yLineSeries.getMarkers();
                 Marker marker = markers.get(seriesIndex % markers.size());
-                ChartFormat seriesFormat = chart.getSeriesFormat(i);
-                MarkerType type = marker.getType();
-                switch (type.getValue())
+                MarkerType mtype = marker.getType();
+                switch (mtype.getValue())
                 {
                     case MarkerType.CROSSHAIR:
                         break;
@@ -1552,8 +1536,59 @@ public class XlsRenderer implements IAreaVisitor
                 seriesFormat.setLineColor(rgb);
                 seriesFormat.setMarkerBackground(rgb);
                 seriesFormat.setMarkerForeground(Color.BLACK.getRGB());
-                chart.setSeriesFormat(i, seriesFormat);
             }
+            
+            if (ySeries instanceof BarSeries) {
+            	BarSeries barSeries = (BarSeries) ySeries;
+            	int seriesIndex = ySeriesDefinition.getRunTimeSeries()
+                        .indexOf(ySeries);
+            	Palette seriesPalette = ySeriesDefinition
+                        .getSeriesPalette();
+                    Fill paletteFill = FillUtil.getPaletteFill(
+                        seriesPalette.getEntries(), seriesIndex);
+                ColorDefinition color = FillUtil.getColor(paletteFill);
+            	
+                int rgb = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
+                
+            	seriesFormat.setForeColor(rgb);
+            	seriesFormat.setBackColor(rgb);
+            }
+            
+            chart.setSeriesFormat(series, seriesFormat);
+            }
+            catch(Exception e) 
+            {
+            	e.printStackTrace();
+            }
+        }
+        
+        if (chart.getChartType() != ChartShape.Scatter && chart.getChartType() != ChartShape.Bubble) 
+        	chart.setCategoryFormula(xFormula);
+
+        if (stacked) {
+        	chart.setPlotStacked(true);
+        	chart.setBarGapRatio(-100);
+        }
+
+        Legend legend = chartWithAxes.getLegend();
+        
+        if (legendVisisble(legend))
+        	chart.setLegendPosition(legendPosition(legend));
+        else
+        	chart.setLegendVisible(false);
+        
+        /*
+        for (int i = 0; i < ySeriesCount; i++)
+        {
+            chart.addSeries();
+            
+            if (chart.getChartType() == ChartShape.Scatter)
+            	chart.setSeriesXValueFormula(i, sheetName + "!" + xRanges[i]);
+            	
+            chart.setSeriesYValueFormula(i, sheetName + "!" + yRanges[i]);
+            chart.setSeriesYAxisIndex(i, yAxisIndexes.get(i));
+
+            
         }
 
         chart.setTitle(chartTitle);
