@@ -35,6 +35,8 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.util.*;
 
+import org.eclipse.birt.chart.model.attribute.Text;
+
 import org.eclipse.birt.chart.model.type.BarSeries;
 
 import org.eclipse.birt.chart.model.attribute.Anchor;
@@ -1303,6 +1305,10 @@ public class XlsRenderer implements IAreaVisitor
     	return ChartShape.LegendPlacementBottom;
     }
     
+    private static int color(ColorDefinition d) {
+    	return new Color(d.getRed(), d.getGreen(), d.getBlue()).getRGB();
+    }
+    
     private void exportChart(int chartIndex, GeneratedChartState generatedChartState,
         XlsCell cell) throws Exception
     {
@@ -1351,7 +1357,19 @@ public class XlsRenderer implements IAreaVisitor
         sheetNum++;
         workbook.insertSheets(sheetNum, 1);
         
-        String chartTitle = chartWithAxes.getTitle().getLabel().getCaption().getValue();
+        Text c = chartWithAxes.getTitle().getLabel().getCaption();
+        
+        ChartFormat format = chart.getTitleFormat();
+        
+        format.setFontColor(color(c.getColor()));
+        format.setFontBold(c.getFont().isBold());
+        format.setFontItalic(c.getFont().isItalic());
+        format.setFontName(c.getFont().getName());
+        format.setFontSizeInPoints(c.getFont().getSize());
+
+        chart.setTitleFormat(format);
+        
+        String chartTitle = c.getValue();
         
         chart.setTitle(chartTitle);
         
