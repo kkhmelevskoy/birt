@@ -1560,9 +1560,8 @@ public class XlsRenderer implements IAreaVisitor
 	                seriesFormat.setMarkerBackground(rgb);
 	                seriesFormat.setMarkerForeground(Color.BLACK.getRGB());
 	            }
-	            
-	            if (ySeries instanceof BarSeries) {
-	            	BarSeries barSeries = (BarSeries) ySeries;
+	            else
+	            {
 	            	int seriesIndex = ySeriesDefinition.getRunTimeSeries()
 	                        .indexOf(ySeries);
 	            	Palette seriesPalette = ySeriesDefinition
