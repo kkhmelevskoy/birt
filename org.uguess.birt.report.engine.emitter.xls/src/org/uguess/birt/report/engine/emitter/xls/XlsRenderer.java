@@ -1394,7 +1394,6 @@ public class XlsRenderer implements IAreaVisitor
         int seriesLen = 0;
         ArrayList<Integer> seriesYAxises = new ArrayList<Integer>();
         ArrayList<String> seriesNames = new ArrayList<String>();
-        ArrayList<Color> seriesColors = new ArrayList<Color>();
         ArrayList<Series> ySerieses = new ArrayList<Series>();
         ArrayList<SeriesDefinition> ySeriesDefinitions = new ArrayList<SeriesDefinition>();
         
@@ -1488,91 +1487,91 @@ public class XlsRenderer implements IAreaVisitor
             SeriesDefinition ySeriesDefinition = ySeriesDefinitions.get(series);
             
             try {
-            ChartFormat seriesFormat = chart.getSeriesFormat(series);
-            
-            if (ySeries instanceof LineSeries)
-            {
-                LineSeries yLineSeries = (LineSeries) ySeries;
-                int seriesIndex = ySeriesDefinition.getRunTimeSeries()
-                    .indexOf(ySeries);
-                EList<Marker> markers = yLineSeries.getMarkers();
-                Marker marker = markers.get(seriesIndex % markers.size());
-                MarkerType mtype = marker.getType();
-                switch (mtype.getValue())
-                {
-                    case MarkerType.CROSSHAIR:
-                        break;
-                    case MarkerType.TRIANGLE:
-                        break;
-                    case MarkerType.BOX:
-                        break;
-                    case MarkerType.CIRCLE:
-                        seriesFormat
-                            .setMarkerStyle(ChartFormat.MarkerCircle);
-                        break;
-                    case MarkerType.ICON:
-                        break;
-                    case MarkerType.NABLA:
-                        break;
-                    case MarkerType.DIAMOND:
-                        seriesFormat
-                            .setMarkerStyle(ChartFormat.MarkerDiamond);
-                        break;
-                    case MarkerType.FOUR_DIAMONDS:
-                        break;
-                    case MarkerType.ELLIPSE:
-                        break;
-                    case MarkerType.SEMI_CIRCLE:
-                        break;
-                    case MarkerType.HEXAGON:
-                        break;
-                    case MarkerType.RECTANGLE:
-                        break;
-                    case MarkerType.STAR:
-                        seriesFormat.setMarkerStyle(ChartFormat.MarkerStar);
-                        break;
-                    case MarkerType.COLUMN:
-                        break;
-                    case MarkerType.CROSS:
-                        break;
-                }
-                ColorDefinition color;
-                if (((LineSeries) ySeries).isPaletteLineColor())
-                {
-                    Palette seriesPalette = ySeriesDefinition
-                        .getSeriesPalette();
-                    Fill paletteFill = FillUtil.getPaletteFill(
-                        seriesPalette.getEntries(), seriesIndex);
-                    color = FillUtil.getColor(paletteFill);
-                }
-                else
-                {
-                    color = ((LineSeries) ySeries).getLineAttributes()
-                        .getColor();
-                }
-                int rgb = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
-                seriesFormat.setLineColor(rgb);
-                seriesFormat.setMarkerBackground(rgb);
-                seriesFormat.setMarkerForeground(Color.BLACK.getRGB());
-            }
-            
-            if (ySeries instanceof BarSeries) {
-            	BarSeries barSeries = (BarSeries) ySeries;
-            	int seriesIndex = ySeriesDefinition.getRunTimeSeries()
-                        .indexOf(ySeries);
-            	Palette seriesPalette = ySeriesDefinition
-                        .getSeriesPalette();
-                    Fill paletteFill = FillUtil.getPaletteFill(
-                        seriesPalette.getEntries(), seriesIndex);
-                ColorDefinition color = FillUtil.getColor(paletteFill);
-            	
-                int rgb = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
-                
-            	seriesFormat.setForeColor(rgb);
-            	seriesFormat.setBackColor(rgb);
-            }
-            
-            chart.setSeriesFormat(series, seriesFormat);
+	            ChartFormat seriesFormat = chart.getSeriesFormat(series);
+	            
+	            if (ySeries instanceof LineSeries)
+	            {
+	                LineSeries yLineSeries = (LineSeries) ySeries;
+	                int seriesIndex = ySeriesDefinition.getRunTimeSeries()
+	                    .indexOf(ySeries);
+	                EList<Marker> markers = yLineSeries.getMarkers();
+	                Marker marker = markers.get(seriesIndex % markers.size());
+	                MarkerType mtype = marker.getType();
+	                switch (mtype.getValue())
+	                {
+	                    case MarkerType.CROSSHAIR:
+	                        break;
+	                    case MarkerType.TRIANGLE:
+	                        break;
+	                    case MarkerType.BOX:
+	                        break;
+	                    case MarkerType.CIRCLE:
+	                        seriesFormat
+	                            .setMarkerStyle(ChartFormat.MarkerCircle);
+	                        break;
+	                    case MarkerType.ICON:
+	                        break;
+	                    case MarkerType.NABLA:
+	                        break;
+	                    case MarkerType.DIAMOND:
+	                        seriesFormat
+	                            .setMarkerStyle(ChartFormat.MarkerDiamond);
+	                        break;
+	                    case MarkerType.FOUR_DIAMONDS:
+	                        break;
+	                    case MarkerType.ELLIPSE:
+	                        break;
+	                    case MarkerType.SEMI_CIRCLE:
+	                        break;
+	                    case MarkerType.HEXAGON:
+	                        break;
+	                    case MarkerType.RECTANGLE:
+	                        break;
+	                    case MarkerType.STAR:
+	                        seriesFormat.setMarkerStyle(ChartFormat.MarkerStar);
+	                        break;
+	                    case MarkerType.COLUMN:
+	                        break;
+	                    case MarkerType.CROSS:
+	                        break;
+	                }
+	                ColorDefinition color;
+	                if (((LineSeries) ySeries).isPaletteLineColor())
+	                {
+	                    Palette seriesPalette = ySeriesDefinition
+	                        .getSeriesPalette();
+	                    Fill paletteFill = FillUtil.getPaletteFill(
+	                        seriesPalette.getEntries(), seriesIndex);
+	                    color = FillUtil.getColor(paletteFill);
+	                }
+	                else
+	                {
+	                    color = ((LineSeries) ySeries).getLineAttributes()
+	                        .getColor();
+	                }
+	                int rgb = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
+	                seriesFormat.setLineColor(rgb);
+	                seriesFormat.setMarkerBackground(rgb);
+	                seriesFormat.setMarkerForeground(Color.BLACK.getRGB());
+	            }
+	            
+	            if (ySeries instanceof BarSeries) {
+	            	BarSeries barSeries = (BarSeries) ySeries;
+	            	int seriesIndex = ySeriesDefinition.getRunTimeSeries()
+	                        .indexOf(ySeries);
+	            	Palette seriesPalette = ySeriesDefinition
+	                        .getSeriesPalette();
+	                    Fill paletteFill = FillUtil.getPaletteFill(
+	                        seriesPalette.getEntries(), seriesIndex);
+	                ColorDefinition color = FillUtil.getColor(paletteFill);
+	            	
+	                int rgb = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
+	                
+	            	seriesFormat.setForeColor(rgb);
+	            	seriesFormat.setBackColor(rgb);
+	            }
+	            
+	            chart.setSeriesFormat(series, seriesFormat);
             }
             catch(Exception e) 
             {
