@@ -35,6 +35,10 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.util.*;
 
+import org.eclipse.birt.chart.model.type.ScatterSeries;
+
+import org.eclipse.birt.chart.model.type.AreaSeries;
+
 import org.eclipse.birt.chart.model.attribute.Text;
 
 import org.eclipse.birt.chart.model.type.BarSeries;
@@ -1413,7 +1417,7 @@ public class XlsRenderer implements IAreaVisitor
         	int beginCol = col;
         	
             EList<SeriesDefinition> seriesDefinitions = axis.getSeriesDefinitions();
-            
+
             for (SeriesDefinition seriesDefinition : seriesDefinitions)
             {
                 for (Series series : seriesDefinition.getRunTimeSeries())
@@ -1462,7 +1466,7 @@ public class XlsRenderer implements IAreaVisitor
             workbook.setColWidthAutoSize(i, true);
         }
         
-        chart.setChartType(type);
+        chart.setChartType(ChartShape.Combination);
 
         String xFormula = sheetName + "!" + workbook.formatRCNr(2, 0, true) + ":" + 
         		workbook.formatRCNr(1 + seriesLen, 0, true);
@@ -1485,6 +1489,8 @@ public class XlsRenderer implements IAreaVisitor
 	        
 			Series ySeries = ySerieses.get(series);
             SeriesDefinition ySeriesDefinition = ySeriesDefinitions.get(series);
+
+            chart.setSeriesType(series, seriesType(ySeries));
             
             try {
 	            ChartFormat seriesFormat = chart.getSeriesFormat(series);
@@ -1627,6 +1633,22 @@ public class XlsRenderer implements IAreaVisitor
         }
 */
         
+    }
+    
+    private static short seriesType(Series s) {
+    	if (s instanceof BarSeries) 
+    		return ChartShape.Column;
+		
+    	if (s instanceof AreaSeries) 
+    		return ChartShape.Area;
+    	
+    	if (s instanceof ScatterSeries) 
+    		return ChartShape.Scatter;
+
+    	if (s instanceof LineSeries)
+    		return ChartShape.Line;
+    	
+    	throw new IllegalStateException("Not supported " + s.getClass().getName());
     }
 
     protected void exportImage(IImageArea image, XlsCell cell) throws Exception
