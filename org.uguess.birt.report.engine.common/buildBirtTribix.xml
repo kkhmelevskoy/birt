@@ -10,7 +10,7 @@
 		<ant antfile="buildBirtProject.xml" target="buildProject">
 			<property name="base.dir" value="${base.dir}" />
 			<property name="javac.executable" value="${javac.executable}" />
-			<property name="project.dir" value="${base.dir}/tribix/org.uguess.birt.report.engine.common" />
+			<property name="project.dir" value="${base.dir}/org.uguess.birt.report.engine.common" />
 			<property name="project.identifier" value="org.uguess.birt.report.engine.common" />
 			<property name="allprojectdeploy.dir" value="${allprojectdeploy.dir}" />
 			<property name="export.dir" value="${export.dir}" />
@@ -22,7 +22,7 @@
 		<ant antfile="buildBirtProject.xml" target="buildProject">
 			<property name="base.dir" value="${base.dir}" />
 			<property name="javac.executable" value="${javac.executable}" />
-			<property name="project.dir" value="${base.dir}/tribix/org.uguess.birt.report.engine.emitter.xls" />
+			<property name="project.dir" value="${base.dir}/org.uguess.birt.report.engine.emitter.xls" />
 			<property name="project.identifier" value="org.uguess.birt.report.engine.emitter.xls" />
 			<property name="allprojectdeploy.dir" value="${allprojectdeploy.dir}" />
 			<property name="export.dir" value="${export.dir}" />
@@ -31,13 +31,13 @@
 	</target>
 	
 	<target depends="Build_org.uguess.birt.report.engine.common,
-		             Build_org.uguess.birt.report.engine.emitter.xls" name="buildAll">
+		             Build_org.uguess.birt.report.engine.emitter.xls" name="buildProjects">
 	</target>
 
 	<target name="buildMain">
 		<delete dir="${allprojectdeploy.dir}" />
 		<mkdir dir="${allprojectdeploy.dir}" />
-		<antcall target="buildAll" />
+		<antcall target="buildProjects" />
 	</target>
 
 </project>
