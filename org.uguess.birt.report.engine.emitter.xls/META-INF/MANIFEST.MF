@@ -12,5 +12,7 @@ Bundle-Vendor: Uguess.org
 Bundle-Localization: plugin
 Require-Bundle: org.eclipse.core.runtime,
  org.uguess.birt.report.engine.common,
+ org.eclipse.birt.chart.engine,
+ com.ibm.icu,
  org.eclipse.birt.chart.engine
 Eclipse-LazyStart: true

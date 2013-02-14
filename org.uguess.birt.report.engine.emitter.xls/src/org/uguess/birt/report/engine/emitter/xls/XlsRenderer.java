@@ -35,6 +35,44 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.util.*;
 
+import com.sun.org.apache.bcel.internal.generic.FDIV;
+
+import com.ibm.icu.text.NumberFormat;
+
+import com.ibm.icu.text.DecimalFormat;
+
+import org.eclipse.birt.chart.util.CDateTime;
+
+import org.eclipse.birt.chart.computation.ValueFormatter;
+
+import org.eclipse.birt.chart.computation.IConstants;
+
+import org.eclipse.birt.chart.computation.DataSetIterator;
+
+import org.eclipse.birt.chart.model.data.DataSet;
+
+import org.eclipse.birt.chart.util.ChartUtil;
+
+import org.eclipse.birt.report.engine.content.impl.ReportContent;
+
+import com.ibm.icu.util.Calendar;
+
+import com.ibm.icu.util.ULocale;
+
+import org.eclipse.birt.chart.model.attribute.StringFormatSpecifier;
+
+import org.eclipse.birt.chart.model.attribute.NumberFormatSpecifier;
+
+import org.eclipse.birt.chart.model.attribute.JavaNumberFormatSpecifier;
+
+import org.eclipse.birt.chart.model.attribute.JavaDateFormatSpecifier;
+
+import org.eclipse.birt.chart.model.attribute.FractionNumberFormatSpecifier;
+
+import org.eclipse.birt.chart.model.attribute.DateFormatSpecifier;
+
+import org.eclipse.birt.chart.model.attribute.FormatSpecifier;
+
 import org.eclipse.birt.chart.model.type.ScatterSeries;
 
 import org.eclipse.birt.chart.model.type.AreaSeries;
@@ -189,6 +227,7 @@ public class XlsRenderer implements IAreaVisitor
     private boolean closeStream;
     private OutputStream output = null;
     private WorkBook workbook;
+    private ULocale ulocale;
     private int sheetNum = -1;
     private XlsStyleProcessor processor;
     protected Stack<Frame> frameStack;
@@ -202,6 +241,8 @@ public class XlsRenderer implements IAreaVisitor
     private List<XlsCell> chartCells = new ArrayList<XlsCell>();
     private List<GeneratedChartState> chartStates = new ArrayList<GeneratedChartState>();
 
+    private ChartUtil.CacheDateFormat cacheDateFormat;
+    
     public void initialize(IEmitterServices services)
     {
         // init options.
@@ -624,6 +665,10 @@ public class XlsRenderer implements IAreaVisitor
             timeCounter = System.currentTimeMillis();
         }
 
+        ulocale = ULocale.forLocale(((ReportContent)rc).getExecutionContext().getLocale());
+        
+        cacheDateFormat = new ChartUtil.CacheDateFormat(ulocale);
+        
         this.frameStack = new Stack<Frame>();
 
         workbook = new WorkBook();
@@ -1235,32 +1280,69 @@ public class XlsRenderer implements IAreaVisitor
         }
     }
     
-    private double[] toDoubles(Object[] os) {
-    	double[] result = new double[os.length];
+    private static double roundTo(Number n, int fractionDigits) {
+    	double res = n.doubleValue();
     	
-    	for (int i = 0; i < os.length; i++)
-    		result[i] = os[i] == null ? Double.NaN : ((Number)os[i]).doubleValue();
-    	 
-    	return result;
+    	double scale = 1;
+    	
+    	for (int i = 0; i < fractionDigits; i++) 
+    	{
+    		scale *= 10;
+    	}
+    	
+    	return Math.round(res * scale) / scale;
     }
-
-    private boolean writeChartValue(WorkBook workbook, int row, int col, Object val) throws Exception 
+    
+    /**
+     * 
+     * @param workbook
+     * @param row
+     * @param col
+     * @param val
+     * @param valType {@link IConstants#NUMERICAL}, {@link IConstants#DATE_TIME}, {@link IConstants#TEXT}
+     * @param formatSpec
+     * @param oCachedJavaFormatter
+     * @throws Exception
+     */
+    private void writeChartValue(WorkBook workbook, int row, int col, Object val, int valType,
+    		FormatSpecifier formatSpec, Object oCachedJavaFormatter) throws Exception 
     {
     	if (val == null)
-    		return true;
+    		return;
     	
-    	if (val instanceof Number) 
-    	{
-			Number n = (Number) val;
-			
+    	if (valType == IConstants.NUMERICAL && val instanceof Number) {
+    		Number n = (Number) val;
+    		
+    		if (formatSpec instanceof NumberFormatSpecifier) 
+    		{
+    			NumberFormatSpecifier nfs = (NumberFormatSpecifier) formatSpec;
+    			
+    			if (nfs.isSetFractionDigits()) 
+    			{
+    				n = roundTo(n, nfs.getFractionDigits());
+    			}
+    		}
+    		else if (formatSpec instanceof JavaNumberFormatSpecifier) 
+    		{
+    			JavaNumberFormatSpecifier nfs = (JavaNumberFormatSpecifier) formatSpec;
+    			
+    			DecimalFormat df = (DecimalFormat) DecimalFormat.getInstance(ulocale);
+    			
+    			df.applyPattern(nfs.getPattern());
+    			
+    			String tmp = df.format(n);
+    			
+    			n = df.parse(tmp);
+    		}
+    		
 			workbook.setNumber(row, col, n.doubleValue());
-			
-			return true;
-		}
-    	
-		workbook.setText(row, col, val.toString());
-    
-		return false;
+    	}
+    	else 
+    	{
+	    	String str = ValueFormatter.format(val, formatSpec, ulocale, oCachedJavaFormatter);
+	    	
+	    	workbook.setText(row, col, str);
+    	}
     }
     
     private static String chartDataSheetName(String title, int chartIndex) {
@@ -1413,6 +1495,8 @@ public class XlsRenderer implements IAreaVisitor
         		yAxises++;
         	else if (axis.getType() == AxisType.LOGARITHMIC_LITERAL)
         		chart.setLogScale(true);
+
+        	FormatSpecifier formatSpec = axis.getFormatSpecifier();
         	
         	int beginCol = col;
         	
@@ -1426,14 +1510,27 @@ public class XlsRenderer implements IAreaVisitor
                 	
                 	workbook.setText(1, col, seriesTitle);
                 	
-                    Object[] values = (Object[]) series.getDataSet().getValues();
+                	DataSet dataSet = series.getDataSet();
+                	
+            		DataSetIterator it = new DataSetIterator(dataSet);
+            		
+            		Object cachedFormat = null;
+            		
+            		if (it.getDataType() == IConstants.DATE_TIME) 
+            		{
+            			int dateUnit = ChartUtil.computeDateTimeCategoryUnit(chartModel, it);
+            			
+            			cachedFormat = cacheDateFormat.get(dateUnit);
+            		}
+                	
+                    Object[] values = (Object[]) dataSet.getValues();
 
                     if (seriesLen < values.length)
                     	seriesLen = values.length;
                     
                     for (int i = 0; i < values.length; i++) 
                     {
-                    	writeChartValue(workbook, 2 + i, col, values[i]);
+                    	writeChartValue(workbook, 2 + i, col, values[i], it.getDataType(), formatSpec, cachedFormat);
                     }
                     
                     if (col != 0) {
