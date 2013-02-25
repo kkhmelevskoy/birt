@@ -1348,20 +1348,25 @@ public class XlsRenderer implements IAreaVisitor
     private static String chartDataSheetName(String title, int chartIndex) {
     	chartIndex++;
     	
-    	// Replace illegal characters with space.
-    	title = title.replace(':', ' ');
-    	title = title.replace('\\',' ');
-    	title = title.replace('/', ' ');
-    	title = title.replace('?', ' ');
-    	title = title.replace('*', ' ');
-    	title = title.replace('?', ' ');
+    	String name = "График " + chartIndex; // Use chart index to make sheet name unique.
     	
-    	title = "График " + chartIndex + " - " + title; // Use chart index to make sheet name unique.
+    	if (title != null) 
+    	{
+	    	// Replace illegal characters with space.
+	    	title = title.replace(':', ' ');
+	    	title = title.replace('\\',' ');
+	    	title = title.replace('/', ' ');
+	    	title = title.replace('?', ' ');
+	    	title = title.replace('*', ' ');
+	    	title = title.replace('?', ' ');
+	    	
+	    	name += " - " + title;
+    	}
     	
-    	if (title.length() > 31)
-    		title = title.substring(0, 31); // Make sure that title is not too long for excel sheet name.
+		if (name.length() > 31)
+    		name = name.substring(0, 31); // Make sure that name is not too long for excel sheet name.
     	
-    	return title;
+    	return name;
     }
     
     private static boolean legendVisisble(Legend legend) {
@@ -1443,21 +1448,26 @@ public class XlsRenderer implements IAreaVisitor
         sheetNum++;
         workbook.insertSheets(sheetNum, 1);
         
-        Text c = chartWithAxes.getTitle().getLabel().getCaption();
+        String chartTitle = null;
         
-        ChartFormat format = chart.getTitleFormat();
-        
-        format.setFontColor(color(c.getColor()));
-        format.setFontBold(c.getFont().isBold());
-        format.setFontItalic(c.getFont().isItalic());
-        format.setFontName(c.getFont().getName());
-        format.setFontSizeInPoints(c.getFont().getSize());
-
-        chart.setTitleFormat(format);
-        
-        String chartTitle = c.getValue();
-        
-        chart.setTitle(chartTitle);
+        if (chartWithAxes.getTitle().isVisible()) 
+        {
+	        Text c = chartWithAxes.getTitle().getLabel().getCaption();
+	        
+	        ChartFormat format = chart.getTitleFormat();
+	        
+	        format.setFontColor(color(c.getColor()));
+	        format.setFontBold(c.getFont().isBold());
+	        format.setFontItalic(c.getFont().isItalic());
+	        format.setFontName(c.getFont().getName());
+	        format.setFontSizeInPoints(c.getFont().getSize());
+	
+	        chart.setTitleFormat(format);
+	        
+	        chartTitle = c.getValue();
+	        
+	        chart.setTitle(chartTitle);
+        }
         
         String sheetName = chartDataSheetName(chartTitle, chartIndex);
         
