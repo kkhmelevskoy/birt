@@ -1365,7 +1365,7 @@ public class XlsRenderer implements IAreaVisitor
     }
     
     private static boolean legendVisisble(Legend legend) {
-    	return legend != null;
+    	return legend != null && legend.isVisible();
     }
     
     private static short legendPosition(Legend legend) {
