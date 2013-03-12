@@ -1400,6 +1400,21 @@ public class XlsRenderer implements IAreaVisitor
     	return new Color(d.getRed(), d.getGreen(), d.getBlue()).getRGB();
     }
     
+    private static <X> X[] reverse(X[] arr) {
+    	if (arr == null || arr.length == 1)
+    		return arr;
+    	
+    	int i = 0, j = arr.length - 1;
+    	
+    	while (i < j) {
+    		X tmp = arr[i];
+    		arr[i++] = arr[j];
+    		arr[j--] = tmp;
+    	}
+    	
+    	return arr;
+    }
+    
     private void exportChart(int chartIndex, GeneratedChartState generatedChartState,
         XlsCell cell) throws Exception
     {
@@ -1483,7 +1498,7 @@ public class XlsRenderer implements IAreaVisitor
 
         ArrayList<Axis> allAxes = new ArrayList<Axis>();
         allAxes.add(xAxis);
-        allAxes.addAll(Arrays.asList(yAxes));
+        allAxes.addAll(Arrays.asList(reverse(yAxes)));
         
         int yAxises = 0;
         int col = 0;
