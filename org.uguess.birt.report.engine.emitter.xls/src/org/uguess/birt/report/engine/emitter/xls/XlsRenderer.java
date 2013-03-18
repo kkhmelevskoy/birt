@@ -1401,18 +1401,26 @@ public class XlsRenderer implements IAreaVisitor
     }
     
     private static <X> X[] reverse(X[] arr) {
-    	if (arr == null || arr.length == 1)
-    		return arr;
-    	
-    	int i = 0, j = arr.length - 1;
-    	
-    	while (i < j) {
-    		X tmp = arr[i];
-    		arr[i++] = arr[j];
-    		arr[j--] = tmp;
-    	}
+//    	if (arr == null || arr.length == 1)
+//    		return arr;
+//    	
+//    	int i = 0, j = arr.length - 1;
+//    	
+//    	while (i < j) {
+//    		X tmp = arr[i];
+//    		arr[i++] = arr[j];
+//    		arr[j--] = tmp;
+//    	}
     	
     	return arr;
+    }
+    
+    private static void applyTextFormat(Text c, ChartFormat format) throws Exception {
+    	format.setFontColor(color(c.getColor()));
+        format.setFontBold(c.getFont().isBold());
+        format.setFontItalic(c.getFont().isItalic());
+        format.setFontName(c.getFont().getName());
+        format.setFontSizeInPoints(c.getFont().getSize());
     }
     
     private void exportChart(int chartIndex, GeneratedChartState generatedChartState,
@@ -1471,12 +1479,8 @@ public class XlsRenderer implements IAreaVisitor
 	        
 	        ChartFormat format = chart.getTitleFormat();
 	        
-	        format.setFontColor(color(c.getColor()));
-	        format.setFontBold(c.getFont().isBold());
-	        format.setFontItalic(c.getFont().isItalic());
-	        format.setFontName(c.getFont().getName());
-	        format.setFontSizeInPoints(c.getFont().getSize());
-	
+	        applyTextFormat(c, format);
+	        
 	        chart.setTitleFormat(format);
 	        
 	        chartTitle = c.getValue();
@@ -1510,11 +1514,21 @@ public class XlsRenderer implements IAreaVisitor
         
         for (Axis axis : allAxes)
         {
-        	String axisTitle = axis.getTitle().getCaption().getValue();
+        	Text c = axis.getTitle().getCaption();
+        	String axisTitle = c.getValue();
 
-        	if (axisTitle != null && axisTitle.length() != 0 && 
-        			!"X-Axis Title".equals(axisTitle) && !"Y-Axis Title".equals(axisTitle))
-        		chart.setAxisTitle(col == 0 ? ChartShape.XAxis : ChartShape.YAxis, yAxises, axisTitle);
+        	if (axis.getTitle().isVisible() && axisTitle != null && axisTitle.length() != 0 && 
+        			!"X-Axis Title".equals(axisTitle) && !"Y-Axis Title".equals(axisTitle)) {
+        		short xyAxis = col == 0 ? ChartShape.XAxis : ChartShape.YAxis;
+        		
+        		chart.setAxisTitle(xyAxis, yAxises, axisTitle);
+        		
+        		ChartFormat axisFormat = chart.getAxisFormat(xyAxis, yAxises);
+        		
+        		applyTextFormat(c, axisFormat);
+        		
+        		chart.setAxisFormat(xyAxis, yAxises, axisFormat);
+        	}
         	
         	if (col != 0)
         		yAxises++;
