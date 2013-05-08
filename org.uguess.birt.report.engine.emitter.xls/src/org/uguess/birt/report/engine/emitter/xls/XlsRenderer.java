@@ -1397,9 +1397,8 @@ public class XlsRenderer implements IAreaVisitor
     	format.setFontColor(color(c.getColor()));
         format.setFontBold(c.getFont().isBold());
         format.setFontItalic(c.getFont().isItalic());
-        format.setFontName(c.getFont().getName());
+        format.setFontName("sansserif".equals(c.getFont().getName()) ? "sans-serif" : c.getFont().getName());
         format.setFontSizeInPoints(c.getFont().getSize());
-        
         format.setTextRotation((int) c.getFont().getRotation());
     }
     
