@@ -1502,56 +1502,64 @@ public class XlsRenderer implements IAreaVisitor
     		applyTextFormat(c, axisFormat);
     		chart.setAxisTitleFormat(xyAxis, yAxises, axisFormat);
     		
-    		c = axis.getLabel().getCaption();
-    		
-    		axisFormat = chart.getAxisFormat(xyAxis, yAxises);
-    		applyTextFormat(c, axisFormat);
-    		
-        	if (axis.getTitle().isVisible() && axisTitle != null && axisTitle.length() != 0 && 
-        			!"X-Axis Title".equals(axisTitle) && !"Y-Axis Title".equals(axisTitle))
-        	{
-        		chart.setAxisTitle(xyAxis, yAxises, axisTitle);
-        	}
-        	
         	FormatSpecifier axisFormatSpec = axis.getFormatSpecifier();
         	
-        	if (!"X-Axis Title".equals(axisTitle))
-        	{
-        		applyFormatSpecifier(axisFormat, axisFormatSpec);
-        	}
-        	
-        	if (axis.getType() == AxisType.LINEAR_LITERAL)
-        	{
-	        	double min = 0;
-	        	double max = 0;
-	        	Scale scale = axis.getScale();
-	        	
-	        	if (scale.getMin() instanceof NumberDataElement)
+    		if (axis.getLabel().isSetVisible() && axis.getLabel().isVisible() || allAxes.size() > 2)
+    		{
+	    		c = axis.getLabel().getCaption();
+	    		
+	    		axisFormat = chart.getAxisFormat(xyAxis, yAxises);
+	    		applyTextFormat(c, axisFormat);
+	    		
+	        	if (axis.getTitle().isVisible() && axisTitle != null && axisTitle.length() != 0 && 
+	        			!"X-Axis Title".equals(axisTitle) && !"Y-Axis Title".equals(axisTitle))
 	        	{
-	        		NumberDataElement numberDataElement = (NumberDataElement) scale.getMin();
-	        		
-	        		if (numberDataElement.isSetValue())
-	        		{
-	                	chart.setAutoMinimumScale(xyAxis, yAxises, false);
-	                	min = numberDataElement.getValue();
-	        		}
+	        		chart.setAxisTitle(xyAxis, yAxises, axisTitle);
 	        	}
 	        	
-	        	if (scale.getMax() instanceof NumberDataElement)
+	        	if (!"X-Axis Title".equals(axisTitle))
 	        	{
-	        		NumberDataElement numberDataElement = (NumberDataElement) scale.getMax();
-	        		
-	        		if (numberDataElement.isSetValue())
-	        		{
-	                	chart.setAutoMaximumScale(xyAxis, yAxises, false);
-	                	max = numberDataElement.getValue();
-	        		}
+	        		applyFormatSpecifier(axisFormat, axisFormatSpec);
 	        	}
 	        	
-	        	chart.setScaleValueRange(xyAxis, yAxises, min, max);
-        	}
-        	
-    		chart.setAxisFormat(xyAxis, yAxises, axisFormat);
+	        	if (axis.getType() == AxisType.LINEAR_LITERAL)
+	        	{
+		        	double min = 0;
+		        	double max = 0;
+		        	Scale scale = axis.getScale();
+		        	
+		        	if (scale.getMin() instanceof NumberDataElement)
+		        	{
+		        		NumberDataElement numberDataElement = (NumberDataElement) scale.getMin();
+		        		
+		        		if (numberDataElement.isSetValue())
+		        		{
+		                	chart.setAutoMinimumScale(xyAxis, yAxises, false);
+		                	min = numberDataElement.getValue();
+		        		}
+		        	}
+		        	
+		        	if (scale.getMax() instanceof NumberDataElement)
+		        	{
+		        		NumberDataElement numberDataElement = (NumberDataElement) scale.getMax();
+		        		
+		        		if (numberDataElement.isSetValue())
+		        		{
+		                	chart.setAutoMaximumScale(xyAxis, yAxises, false);
+		                	max = numberDataElement.getValue();
+		        		}
+		        	}
+		        	
+		        	chart.setScaleValueRange(xyAxis, yAxises, min, max);
+	        	}
+	        	
+	    		chart.setAxisFormat(xyAxis, yAxises, axisFormat);
+    		}
+    		else
+    		{
+        		chart.setAxisVisible(xyAxis, yAxises, false);
+    		}
+    		
         	
         	if (col != 0)
         		yAxises++;
