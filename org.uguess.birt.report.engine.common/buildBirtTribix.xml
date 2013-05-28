@@ -23,7 +23,8 @@
 			<property name="base.dir" value="${base.dir}" />
 			<property name="javac.executable" value="${javac.executable}" />
 			<property name="project.dir" value="${base.dir}/org.uguess.birt.report.engine.emitter.xls" />
-			<property name="project.identifier" value="org.uguess.birt.report.engine.emitter.xls" />
+			<!--<property name="project.identifier" value="org.uguess.birt.report.engine.emitter.xls" />-->
+			<property name="project.identifier" value="xls-emitter" />
 			<property name="allprojectdeploy.dir" value="${allprojectdeploy.dir}" />
 			<property name="export.dir" value="${export.dir}" />
 			<property name="export" value="true" />
