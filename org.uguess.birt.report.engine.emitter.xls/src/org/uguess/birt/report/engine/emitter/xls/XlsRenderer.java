@@ -1,22 +1,16 @@
 /********************************************************************************
- * (C) Copyright 2000-2005, by Shawn Qualia.
- *
- * This library is free software; you can redistribute it and/or modify it 
- * under the terms of the GNU Lesser General Public License as published by 
- * the Free Software Foundation; either version 2.1 of the License, or 
- * (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
- * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public 
- * License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License 
- * along with this library; if not, write to the Free Software Foundation, 
- * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
- *
- * [Java is a trademark or registered trademark of Sun Microsystems, Inc. 
- * in the United States and other countries.]
+ * (C) Copyright 2000-2005, by Shawn Qualia. This library is free software; you
+ * can redistribute it and/or modify it under the terms of the GNU Lesser
+ * General Public License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version. This
+ * library is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details. You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+ * [Java is a trademark or registered trademark of Sun Microsystems, Inc. in the
+ * United States and other countries.]
  ********************************************************************************/
 
 package org.uguess.birt.report.engine.emitter.xls;
@@ -225,7 +219,7 @@ public class XlsRenderer implements IAreaVisitor
     private List<GeneratedChartState> chartStates = new ArrayList<GeneratedChartState>();
 
     private ChartUtil.CacheDateFormat cacheDateFormat;
-    
+
     public void initialize(IEmitterServices services)
     {
         // init options.
@@ -648,10 +642,11 @@ public class XlsRenderer implements IAreaVisitor
             timeCounter = System.currentTimeMillis();
         }
 
-        ulocale = ULocale.forLocale(((ReportContent)rc).getExecutionContext().getLocale());
-        
+        ulocale = ULocale.forLocale(((ReportContent) rc).getExecutionContext()
+            .getLocale());
+
         cacheDateFormat = new ChartUtil.CacheDateFormat(ulocale);
-        
+
         this.frameStack = new Stack<Frame>();
 
         workbook = new WorkBook();
@@ -735,7 +730,7 @@ public class XlsRenderer implements IAreaVisitor
                 }
                 catch (Exception e)
                 {
-                	System.err.println(i);
+                    System.err.println(i);
                     e.printStackTrace();
                 }
             }
@@ -746,7 +741,7 @@ public class XlsRenderer implements IAreaVisitor
             workbook.setSheet(0); // activate first sheet in report
 
             workbook.write(output);
-            //workbook.writeXLSX(output);
+            // workbook.writeXLSX(output);
 
             if (closeStream)
             {
@@ -1240,8 +1235,10 @@ public class XlsRenderer implements IAreaVisitor
                 .getGeneratedChartState();
             if (generatedChartState instanceof GeneratedChartState)
             {
-                // Экспортируем графики в конце чтобы не сбивать настройку
-                // страниц, поскольку при экспорте вставляются страницы с
+                // Экспортируем графики в конце
+                // чтобы не сбивать настройку
+                // страниц, поскольку при экспорте
+                // вставляются страницы с
                 // данными графиков
                 chartCount++;
                 chartCells.add(cell);
@@ -1263,764 +1260,790 @@ public class XlsRenderer implements IAreaVisitor
             handleComments((IArea) cellValue, cell);
         }
     }
-    
-    private static double roundTo(Number n, int fractionDigits) {
-    	double res = n.doubleValue();
-    	
-    	double scale = 1;
-    	
-    	for (int i = 0; i < fractionDigits; i++) 
-    	{
-    		scale *= 10;
-    	}
-    	
-    	return Math.round(res * scale) / scale;
+
+    private static double roundTo(Number n, int fractionDigits)
+    {
+        double res = n.doubleValue();
+
+        double scale = 1;
+
+        for (int i = 0; i < fractionDigits; i++)
+        {
+            scale *= 10;
+        }
+
+        return Math.round(res * scale) / scale;
     }
-    
+
     /**
-     * 
      * @param workbook
      * @param row
      * @param col
      * @param val
-     * @param valType {@link IConstants#NUMERICAL}, {@link IConstants#DATE_TIME}, {@link IConstants#TEXT}
+     * @param valType {@link IConstants#NUMERICAL}, {@link IConstants#DATE_TIME}
+     *            , {@link IConstants#TEXT}
      * @param formatSpec
      * @param oCachedJavaFormatter
      * @throws Exception
      */
-    private void writeChartValue(WorkBook workbook, int row, int col, Object val, int valType,
-    		FormatSpecifier formatSpec, Object oCachedJavaFormatter) throws Exception 
+    private void writeChartValue(WorkBook workbook, int row, int col,
+        Object val, int valType, FormatSpecifier formatSpec,
+        Object oCachedJavaFormatter) throws Exception
     {
-    	if (val == null)
-    		return;
-    	
-    	if (valType == IConstants.NUMERICAL && val instanceof Number) {
-    		Number n = (Number) val;
-    		
-    		if (formatSpec instanceof NumberFormatSpecifier) 
-    		{
-    			NumberFormatSpecifier nfs = (NumberFormatSpecifier) formatSpec;
-    			
-    			if (nfs.isSetFractionDigits()) 
-    			{
-    				n = roundTo(n, nfs.getFractionDigits());
-    			}
-    		}
-    		else if (formatSpec instanceof JavaNumberFormatSpecifier) 
-    		{
-    			JavaNumberFormatSpecifier nfs = (JavaNumberFormatSpecifier) formatSpec;
-    			
-    			DecimalFormat df = (DecimalFormat) DecimalFormat.getInstance(ulocale);
-    			
-    			df.applyPattern(nfs.getPattern());
-    			
-    			String tmp = df.format(n);
-    			
-    			n = df.parse(tmp);
-    		}
-    		
-			workbook.setNumber(row, col, n.doubleValue());
-    	}
-    	else 
-    	{
-	    	String str = ValueFormatter.format(val, formatSpec, ulocale, oCachedJavaFormatter);
-	    	
-	    	workbook.setText(row, col, str);
-    	}
+        if (val == null)
+            return;
+
+        if (valType == IConstants.NUMERICAL && val instanceof Number)
+        {
+            Number n = (Number) val;
+
+            if (formatSpec instanceof NumberFormatSpecifier)
+            {
+                NumberFormatSpecifier nfs = (NumberFormatSpecifier) formatSpec;
+
+                if (nfs.isSetFractionDigits())
+                {
+                    n = roundTo(n, nfs.getFractionDigits());
+                }
+            }
+            else if (formatSpec instanceof JavaNumberFormatSpecifier)
+            {
+                JavaNumberFormatSpecifier nfs = (JavaNumberFormatSpecifier) formatSpec;
+
+                DecimalFormat df = (DecimalFormat) DecimalFormat
+                    .getInstance(ulocale);
+
+                df.applyPattern(nfs.getPattern());
+
+                String tmp = df.format(n);
+
+                n = df.parse(tmp);
+            }
+
+            workbook.setNumber(row, col, n.doubleValue());
+        }
+        else
+        {
+            String str = ValueFormatter.format(val, formatSpec, ulocale,
+                oCachedJavaFormatter);
+
+            workbook.setText(row, col, str);
+        }
     }
-    
-    private static String chartDataSheetName(String prefix, String title, int chartIndex) {
-    	chartIndex++;
-    	
-    	//StringBuilder name = new StringBuilder("График " + chartIndex);
-    	StringBuilder name = new StringBuilder(prefix != null ? prefix + " - " : ""); // Use chart index to make sheet name unique.
-    	
-    	if (title != null) 
-    	{
-	    	// Replace illegal characters with space.
-	    	title = title.replace(':', ' ');
-	    	title = title.replace('\\',' ');
-	    	title = title.replace('/', ' ');
-	    	title = title.replace('?', ' ');
-	    	title = title.replace('*', ' ');
-	    	title = title.replace('?', ' ');
-	    	
-	    	name.append(title);
-    	}
-    	
-		if (name.length() > 31)
-		{
-    		name.setLength(31); // Make sure that name is not too long for excel sheet name.
-		}
-    	
-    	return name.toString();
+
+    private static String chartDataSheetName(String prefix, String title,
+        int chartIndex)
+    {
+        chartIndex++;
+
+        // StringBuilder name = new StringBuilder("График " + chartIndex);
+        StringBuilder name = new StringBuilder(prefix != null ? prefix + " - "
+            : ""); // Use chart index to make sheet name unique.
+
+        if (title != null)
+        {
+            // Replace illegal characters with space.
+            title = title.replace(':', ' ');
+            title = title.replace('\\', ' ');
+            title = title.replace('/', ' ');
+            title = title.replace('?', ' ');
+            title = title.replace('*', ' ');
+            title = title.replace('?', ' ');
+
+            name.append(title);
+        }
+
+        if (name.length() > 31)
+        {
+            name.setLength(31); // Make sure that name is not too long for excel
+                                // sheet name.
+        }
+
+        return name.toString();
     }
-    
-    private static boolean legendVisisble(Legend legend) {
-    	return legend != null && legend.isVisible();
+
+    private static boolean legendVisisble(Legend legend)
+    {
+        return legend != null && legend.isVisible();
     }
-    
-    private static short legendPosition(Legend legend) {
-    	switch (legend.getPosition()) {
-			case LEFT_LITERAL:
-				return ChartShape.LegendPlacementLeft;
-			case ABOVE_LITERAL:
-				return ChartShape.LegendPlacementTop;
-			case RIGHT_LITERAL:
-				return ChartShape.LegendPlacementRight;
-			default:
-				return ChartShape.LegendPlacementBottom;
-		}
+
+    private static short legendPosition(Legend legend)
+    {
+        switch (legend.getPosition())
+        {
+            case LEFT_LITERAL:
+                return ChartShape.LegendPlacementLeft;
+            case ABOVE_LITERAL:
+                return ChartShape.LegendPlacementTop;
+            case RIGHT_LITERAL:
+                return ChartShape.LegendPlacementRight;
+            default:
+                return ChartShape.LegendPlacementBottom;
+        }
     }
-    
-    private static int color(ColorDefinition d) {
-    	return new Color(d.getRed(), d.getGreen(), d.getBlue()).getRGB();
+
+    private static int color(ColorDefinition d)
+    {
+        return new Color(d.getRed(), d.getGreen(), d.getBlue()).getRGB();
     }
-    
-    private static <X> X[] reverse(X[] arr) {
-//    	if (arr == null || arr.length == 1)
-//    		return arr;
-//    	
-//    	int i = 0, j = arr.length - 1;
-//    	
-//    	while (i < j) {
-//    		X tmp = arr[i];
-//    		arr[i++] = arr[j];
-//    		arr[j--] = tmp;
-//    	}
-    	
-    	return arr;
+
+    private static <X> X[] reverse(X[] arr)
+    {
+        // if (arr == null || arr.length == 1)
+        // return arr;
+        //
+        // int i = 0, j = arr.length - 1;
+        //
+        // while (i < j) {
+        // X tmp = arr[i];
+        // arr[i++] = arr[j];
+        // arr[j--] = tmp;
+        // }
+
+        return arr;
     }
-    
+
     private void applyTextFormat(Text c, ChartFormat format) throws Exception
     {
-    	format.setFontColor(color(c.getColor()));
+        format.setFontColor(color(c.getColor()));
         format.setFontBold(c.getFont().isBold());
         format.setFontItalic(c.getFont().isItalic());
-        format.setFontName("sansserif".equals(c.getFont().getName()) ? "sans-serif" : c.getFont().getName());
+        format
+            .setFontName("sansserif".equals(c.getFont().getName()) ? "sans-serif"
+                : c.getFont().getName());
         format.setFontSizeInPoints(c.getFont().getSize());
         format.setTextRotation((int) c.getFont().getRotation());
     }
-    
-    private void exportChart(int chartIndex, GeneratedChartState generatedChartState,
-        XlsCell cell) throws Exception
+
+    private void exportChart(int chartIndex,
+        GeneratedChartState generatedChartState, XlsCell cell) throws Exception
     {
         workbook.setSheet(cell.sheet);
         ChartShape chart = workbook.addChart(cell.x, cell.y, cell.x2 + 1,
             cell.y2 + 1);
-        
+
         ChartFormat chartFormat = chart.getPlotFormat();
         chartFormat.setSolid();
         chartFormat.setForeColor(Color.WHITE.getRGB());
         chart.setPlotFormat(chartFormat);
-    	
+
         Chart chartModel = generatedChartState.getChartModel();
         String chartType = chartModel.getType();
         String chartSubType = chartModel.getSubType();
 
         short type;
         boolean stacked = "Stacked".equals(chartSubType);
-        
+
         if ("Line Chart".equals(chartType))
         {
-        	type = ChartShape.Line;
+            type = ChartShape.Line;
         }
-        else if ("Bar Chart".equals(chartType)) 
+        else if ("Bar Chart".equals(chartType))
         {
-        	type = ChartShape.Column;
+            type = ChartShape.Column;
         }
-        else if ("Area Chart".equals(chartType)) 
+        else if ("Area Chart".equals(chartType))
         {
-        	type = ChartShape.Area;
+            type = ChartShape.Area;
         }
         else if ("Scatter Chart".equals(chartType))
         {
-        	type = ChartShape.Scatter;
+            type = ChartShape.Scatter;
         }
-        else 
+        else
         {
-        	throw new IllegalStateException(chartType + " is not supported.");
+            throw new IllegalStateException(chartType + " is not supported.");
         }
-        
+
         ChartWithAxes chartWithAxes = (ChartWithAxes) chartModel;
-        
+
         // Создаем страницу для данных графика
         sheetNum++;
         workbook.insertSheets(sheetNum, 1);
-        
+
         String chartTitle = null;
-        
-        if (chartWithAxes.getTitle().isVisible()) 
+
+        if (chartWithAxes.getTitle().isVisible())
         {
-	        Text c = chartWithAxes.getTitle().getLabel().getCaption();
-	        
-	        ChartFormat format = chart.getTitleFormat();
-	        
-	        applyTextFormat(c, format);
-	        
-	        chart.setTitleFormat(format);
-	        
-	        chartTitle = c.getValue();
-	        
-	        chart.setTitle(chartTitle);
+            Text c = chartWithAxes.getTitle().getLabel().getCaption();
+
+            ChartFormat format = chart.getTitleFormat();
+
+            applyTextFormat(c, format);
+
+            chart.setTitleFormat(format);
+
+            chartTitle = c.getValue();
+
+            chart.setTitle(chartTitle);
         }
-        
-        String sheetName = chartDataSheetName(workbook.getSheetName(cell.sheet), chartTitle, chartIndex);
-        
+
+        String sheetName = chartDataSheetName(
+            workbook.getSheetName(cell.sheet), chartTitle, chartIndex);
+
         workbook.setSheetName(sheetNum, sheetName);
         workbook.setSheet(sheetNum);
 
         // support only one x axis
         Axis[] baseAxes = chartWithAxes.getBaseAxes();
         Axis xAxis = baseAxes[0];
-        
+
         Axis[] yAxes = chartWithAxes.getOrthogonalAxes(xAxis, true);
         chart.setYAxisCount(yAxes.length);
 
         ArrayList<Axis> allAxes = new ArrayList<Axis>();
         allAxes.add(xAxis);
         yAxes = reverse(yAxes);
-		allAxes.addAll(Arrays.asList(yAxes));
-        
+        allAxes.addAll(Arrays.asList(yAxes));
+
         int yAxises = 0;
         int col = 0;
         int seriesLen = 0;
-        
+
         ArrayList<SeriesDefinition> ySeriesDefinitions = new ArrayList<SeriesDefinition>();
         ArrayList<Integer> seriesYAxises = new ArrayList<Integer>();
         ArrayList<String> seriesNames = new ArrayList<String>();
         ArrayList<Series> ySerieses = new ArrayList<Series>();
-        
+
         for (Axis axis : allAxes)
         {
-        	Text c = axis.getTitle().getCaption();
-        	String axisTitle = c.getValue();
+            Text c = axis.getTitle().getCaption();
+            String axisTitle = c.getValue();
 
-    		short xyAxis = col == 0 ? ChartShape.XAxis : ChartShape.YAxis;
-    		
-    		ChartFormat axisFormat = chart.getAxisTitleFormat(xyAxis, yAxises);
-    		applyTextFormat(c, axisFormat);
-    		chart.setAxisTitleFormat(xyAxis, yAxises, axisFormat);
-    		
-        	FormatSpecifier axisFormatSpec = axis.getFormatSpecifier();
-        	
-    		if (axis.getLabel().isSetVisible() && axis.getLabel().isVisible() || allAxes.size() > 2)
-    		{
-	    		c = axis.getLabel().getCaption();
-	    		
-	    		axisFormat = chart.getAxisFormat(xyAxis, yAxises);
-	    		applyTextFormat(c, axisFormat);
-	    		
-	        	if (axis.getTitle().isVisible() && axisTitle != null && axisTitle.length() != 0 && 
-	        			!"X-Axis Title".equals(axisTitle) && !"Y-Axis Title".equals(axisTitle))
-	        	{
-	        		chart.setAxisTitle(xyAxis, yAxises, axisTitle);
-	        	}
-	        	
-	        	if (!"X-Axis Title".equals(axisTitle))
-	        	{
-	        		applyFormatSpecifier(axisFormat, axisFormatSpec);
-	        	}
-	        	
-	        	if (axis.getType() == AxisType.LINEAR_LITERAL)
-	        	{
-		        	double min = 0;
-		        	double max = 0;
-		        	Scale scale = axis.getScale();
-		        	
-		        	if (scale.getMin() instanceof NumberDataElement)
-		        	{
-		        		NumberDataElement numberDataElement = (NumberDataElement) scale.getMin();
-		        		
-		        		if (numberDataElement.isSetValue())
-		        		{
-		                	chart.setAutoMinimumScale(xyAxis, yAxises, false);
-		                	min = numberDataElement.getValue();
-		        		}
-		        	}
-		        	
-		        	if (scale.getMax() instanceof NumberDataElement)
-		        	{
-		        		NumberDataElement numberDataElement = (NumberDataElement) scale.getMax();
-		        		
-		        		if (numberDataElement.isSetValue())
-		        		{
-		                	chart.setAutoMaximumScale(xyAxis, yAxises, false);
-		                	max = numberDataElement.getValue();
-		        		}
-		        	}
-		        	
-		        	chart.setScaleValueRange(xyAxis, yAxises, min, max);
-	        	}
-	        	
-	    		chart.setAxisFormat(xyAxis, yAxises, axisFormat);
-    		}
-    		else
-    		{
-        		chart.setAxisVisible(xyAxis, yAxises, false);
-    		}
-    		
-        	
-        	if (col != 0)
-        		yAxises++;
-        	else if (axis.getType() == AxisType.LOGARITHMIC_LITERAL)
-        		chart.setLogScale(true);
-        	
-        	int beginCol = col;
-        	
-            EList<SeriesDefinition> unsortedSeriesDefinitions = axis.getSeriesDefinitions();
-            SeriesDefinition[] sortedSeriesDefinitions = unsortedSeriesDefinitions.toArray(new SeriesDefinition[unsortedSeriesDefinitions.size()]);
+            short xyAxis = col == 0 ? ChartShape.XAxis : ChartShape.YAxis;
 
-            Arrays.sort(sortedSeriesDefinitions, new Comparator<SeriesDefinition>()
+            ChartFormat axisFormat = chart.getAxisTitleFormat(xyAxis, yAxises);
+            applyTextFormat(c, axisFormat);
+            chart.setAxisTitleFormat(xyAxis, yAxises, axisFormat);
+
+            FormatSpecifier axisFormatSpec = axis.getFormatSpecifier();
+
+            if (axis.getLabel().isSetVisible() && axis.getLabel().isVisible()
+                || allAxes.size() > 2)
+            {
+                c = axis.getLabel().getCaption();
+
+                axisFormat = chart.getAxisFormat(xyAxis, yAxises);
+                applyTextFormat(c, axisFormat);
+
+                if (axis.getTitle().isVisible() && axisTitle != null
+                    && axisTitle.length() != 0
+                    && !"X-Axis Title".equals(axisTitle)
+                    && !"Y-Axis Title".equals(axisTitle))
                 {
-                	@Override
-                	public int compare(SeriesDefinition o1, SeriesDefinition o2)
-                	{
-                		return Integer.valueOf(o1.getZOrder()).compareTo(Integer.valueOf(o2.getZOrder()));
-                	}
+                    chart.setAxisTitle(xyAxis, yAxises, axisTitle);
+                }
+
+                if (!"X-Axis Title".equals(axisTitle))
+                {
+                    applyFormatSpecifier(axisFormat, axisFormatSpec);
+                }
+
+                if (axis.getType() == AxisType.LINEAR_LITERAL)
+                {
+                    double min = 0;
+                    double max = 0;
+                    Scale scale = axis.getScale();
+
+                    if (scale.getMin() instanceof NumberDataElement)
+                    {
+                        NumberDataElement numberDataElement = (NumberDataElement) scale
+                            .getMin();
+
+                        if (numberDataElement.isSetValue())
+                        {
+                            chart.setAutoMinimumScale(xyAxis, yAxises, false);
+                            min = numberDataElement.getValue();
+                        }
+                    }
+
+                    if (scale.getMax() instanceof NumberDataElement)
+                    {
+                        NumberDataElement numberDataElement = (NumberDataElement) scale
+                            .getMax();
+
+                        if (numberDataElement.isSetValue())
+                        {
+                            chart.setAutoMaximumScale(xyAxis, yAxises, false);
+                            max = numberDataElement.getValue();
+                        }
+                    }
+
+                    chart.setScaleValueRange(xyAxis, yAxises, min, max);
+                }
+
+                chart.setAxisFormat(xyAxis, yAxises, axisFormat);
+            }
+            else
+            {
+                chart.setAxisVisible(xyAxis, yAxises, false);
+            }
+
+            if (col != 0)
+                yAxises++;
+            else if (axis.getType() == AxisType.LOGARITHMIC_LITERAL)
+                chart.setLogScale(true);
+
+            int beginCol = col;
+
+            EList<SeriesDefinition> unsortedSeriesDefinitions = axis
+                .getSeriesDefinitions();
+            SeriesDefinition[] sortedSeriesDefinitions = unsortedSeriesDefinitions
+                .toArray(new SeriesDefinition[unsortedSeriesDefinitions.size()]);
+
+            Arrays.sort(sortedSeriesDefinitions,
+                new Comparator<SeriesDefinition>()
+                {
+                    @Override
+                    public int compare(SeriesDefinition o1, SeriesDefinition o2)
+                    {
+                        return Integer.valueOf(o1.getZOrder()).compareTo(
+                            Integer.valueOf(o2.getZOrder()));
+                    }
                 });
 
             for (SeriesDefinition seriesDefinition : sortedSeriesDefinitions)
             {
                 for (Series series : seriesDefinition.getRunTimeSeries())
                 {
-                	String seriesTitle = series.getSeriesIdentifier().toString();
-                	
-                	workbook.setText(1, col, seriesTitle);
-                	
-                	DataSet dataSet = series.getDataSet();
-                	
-            		DataSetIterator it = new DataSetIterator(dataSet);
-            		
-            		Object cachedFormat = null;
-            		
-            		if (it.getDataType() == IConstants.DATE_TIME) 
-            		{
-            			int dateUnit = ChartUtil.computeDateTimeCategoryUnit(chartModel, it);
-            			
-            			cachedFormat = cacheDateFormat.get(dateUnit);
-            		}
-                	
+                    String seriesTitle = series.getSeriesIdentifier()
+                        .toString();
+
+                    workbook.setText(1, col, seriesTitle);
+
+                    DataSet dataSet = series.getDataSet();
+
+                    DataSetIterator it = new DataSetIterator(dataSet);
+
+                    Object cachedFormat = null;
+
+                    if (it.getDataType() == IConstants.DATE_TIME)
+                    {
+                        int dateUnit = ChartUtil.computeDateTimeCategoryUnit(
+                            chartModel, it);
+
+                        cachedFormat = cacheDateFormat.get(dateUnit);
+                    }
+
                     Object[] values = (Object[]) dataSet.getValues();
 
                     if (seriesLen < values.length)
-                    	seriesLen = values.length;
-                    
-                    for (int i = 0; i < values.length; i++) 
+                        seriesLen = values.length;
+
+                    for (int i = 0; i < values.length; i++)
                     {
-                    	writeChartValue(workbook, 2 + i, col, values[i], it.getDataType(), axisFormatSpec, cachedFormat);
+                        writeChartValue(workbook, 2 + i, col, values[i],
+                            it.getDataType(), axisFormatSpec, cachedFormat);
                     }
-                    
+
                     if (col != 0)
                     {
-                    	seriesYAxises.add(yAxises);
-                    	seriesNames.add(seriesTitle);
-                    	ySeriesDefinitions.add(seriesDefinition);
-                    	ySerieses.add(series);
+                        seriesYAxises.add(yAxises);
+                        seriesNames.add(seriesTitle);
+                        ySeriesDefinitions.add(seriesDefinition);
+                        ySerieses.add(series);
                     }
-                    
+
                     col++;
                 }
             }
-            
-            if (beginCol + 1 < col) 
-            {   
-            	// Merge cells on title if needed.
-	            RangeStyle rangeStyle = workbook.getRangeStyle(0, beginCol, 0, col - 1);
-	            rangeStyle.setMergeCells(true);
-	            rangeStyle.setHorizontalAlignment(RangeStyle.HorizontalAlignmentCenter);
-	            workbook.setRangeStyle(rangeStyle, 0, beginCol, 0, col - 1);
+
+            if (beginCol + 1 < col)
+            {
+                // Merge cells on title if needed.
+                RangeStyle rangeStyle = workbook.getRangeStyle(0, beginCol, 0,
+                    col - 1);
+                rangeStyle.setMergeCells(true);
+                rangeStyle
+                    .setHorizontalAlignment(RangeStyle.HorizontalAlignmentCenter);
+                workbook.setRangeStyle(rangeStyle, 0, beginCol, 0, col - 1);
             }
-            
-            if (axisTitle != null && axisTitle.length() != 0 && 
-            		!"X-Axis Title".equals(axisTitle) && !"Y-Axis Title".equals(axisTitle))
-            	workbook.setText(0, beginCol, axisTitle);
+
+            if (axisTitle != null && axisTitle.length() != 0
+                && !"X-Axis Title".equals(axisTitle)
+                && !"Y-Axis Title".equals(axisTitle))
+                workbook.setText(0, beginCol, axisTitle);
         }
-        
+
         for (int i = 0; i <= allAxes.size(); i++)
         {
             workbook.setColWidthAutoSize(i, true);
         }
-        
+
         chart.setChartType(ChartShape.Combination);
 
-        String xFormula = sheetName + "!" + workbook.formatRCNr(2, 0, true) + ":" + 
-        	workbook.formatRCNr(1 + seriesLen, 0, true);
+        String xFormula = sheetName + "!" + workbook.formatRCNr(2, 0, true)
+            + ":" + workbook.formatRCNr(1 + seriesLen, 0, true);
 
         for (int x = 1; x < col; x++)
         {
-        	String yFormula = sheetName + "!" + workbook.formatRCNr(2, x, true) + ":" + 
-	        		workbook.formatRCNr(1 + seriesLen, x, true);
-	        
-	        int series = x - 1;
-        	
-        	chart.addSeries();
-        	
-        	if (type == ChartShape.Scatter || type == ChartShape.Bubble)
-        		chart.setSeriesXValueFormula(series, xFormula);
-	        chart.setSeriesYValueFormula(series, yFormula);
-	        
-	        chart.setSeriesYAxisIndex(series, seriesYAxises.get(series) - 1);
-	        chart.setSeriesName(series, seriesNames.get(series));
-	        
-			Series ySeries = ySerieses.get(series);
+            String yFormula = sheetName + "!" + workbook.formatRCNr(2, x, true)
+                + ":" + workbook.formatRCNr(1 + seriesLen, x, true);
+
+            int series = x - 1;
+
+            chart.addSeries();
+
+            if (type == ChartShape.Scatter || type == ChartShape.Bubble)
+                chart.setSeriesXValueFormula(series, xFormula);
+            chart.setSeriesYValueFormula(series, yFormula);
+
+            chart.setSeriesYAxisIndex(series, seriesYAxises.get(series) - 1);
+            chart.setSeriesName(series, seriesNames.get(series));
+
+            Series ySeries = ySerieses.get(series);
             SeriesDefinition ySeriesDefinition = ySeriesDefinitions.get(series);
 
             chart.setSeriesType(series, seriesType(ySeries));
-            
+
             try
             {
-	            ChartFormat seriesFormat = chart.getSeriesFormat(series);
-	            ChartFormat labelFormat = chart.getDataLabelFormat(series);
+                ChartFormat seriesFormat = chart.getSeriesFormat(series);
+                ChartFormat labelFormat = chart.getDataLabelFormat(series);
 
-	            //applySeriesLabels(ySeries, seriesFormat);
-	            applySeriesLabels(ySeries, labelFormat);
-	            
-	            FormatSpecifier dataPointFormatSpec = getDataPointFormat(ySeries);
-	            
-	            applyFormatSpecifier(labelFormat, dataPointFormatSpec);
-	            
-	            if (ySeries instanceof LineSeries)
-	            {
-	                LineSeries yLineSeries = (LineSeries) ySeries;
-	                int seriesIndex = ySeriesDefinition.getRunTimeSeries()
-	                    .indexOf(ySeries);
-	                
-	                ColorDefinition color;
-	                if (yLineSeries.isPaletteLineColor())
-	                {
-	                    Palette seriesPalette = ySeriesDefinition
-	                        .getSeriesPalette();
-	                    Fill paletteFill = FillUtil.getPaletteFill(
-	                        seriesPalette.getEntries(), seriesIndex);
-	                    color = FillUtil.getColor(paletteFill);
-	                }
-	                else
-	                {
-	                    color = yLineSeries.getLineAttributes().getColor();
-	                }
-	                int rgb = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
-	                
-	                EList<Marker> markers = yLineSeries.getMarkers();
-	                
-	                Marker marker = markers.get(seriesIndex % markers.size());
-	                
-	                applySeriesMarker(marker, rgb, seriesFormat);
-	                
-	                if (!yLineSeries.getLineAttributes().isVisible())
-	                {
-	                	seriesFormat.setLineNone();
-	                }
-	                else
-	                {
-	                	seriesFormat.setLineStyle(getLineStyle(yLineSeries.getLineAttributes().getStyle()));
-		                seriesFormat.setLineColor(rgb);
-		                
-		                if (yLineSeries.getLineAttributes().isSetThickness())
-		                {
-		                	seriesFormat.setLineWeight(getLineWight(yLineSeries.getLineAttributes().getThickness()));
-		                }
-	                }
-	            }
-	            else
-	            {
-	            	int seriesIndex = ySeriesDefinition.getRunTimeSeries()
-	                        .indexOf(ySeries);
-	            	Palette seriesPalette = ySeriesDefinition
-	                        .getSeriesPalette();
+                // applySeriesLabels(ySeries, seriesFormat);
+                applySeriesLabels(ySeries, labelFormat);
+
+                FormatSpecifier dataPointFormatSpec = getDataPointFormat(ySeries);
+
+                applyFormatSpecifier(labelFormat, dataPointFormatSpec);
+
+                if (ySeries instanceof LineSeries)
+                {
+                    LineSeries yLineSeries = (LineSeries) ySeries;
+                    int seriesIndex = ySeriesDefinition.getRunTimeSeries()
+                        .indexOf(ySeries);
+
+                    ColorDefinition color;
+                    if (yLineSeries.isPaletteLineColor())
+                    {
+                        Palette seriesPalette = ySeriesDefinition
+                            .getSeriesPalette();
+                        Fill paletteFill = FillUtil.getPaletteFill(
+                            seriesPalette.getEntries(), seriesIndex);
+                        color = FillUtil.getColor(paletteFill);
+                    }
+                    else
+                    {
+                        color = yLineSeries.getLineAttributes().getColor();
+                    }
+                    int rgb = new Color(color.getRed(), color.getGreen(),
+                        color.getBlue()).getRGB();
+
+                    EList<Marker> markers = yLineSeries.getMarkers();
+
+                    Marker marker = markers.get(seriesIndex % markers.size());
+
+                    applySeriesMarker(marker, rgb, seriesFormat);
+
+                    if (!yLineSeries.getLineAttributes().isVisible())
+                    {
+                        seriesFormat.setLineNone();
+                    }
+                    else
+                    {
+                        seriesFormat.setLineStyle(getLineStyle(yLineSeries
+                            .getLineAttributes().getStyle()));
+                        seriesFormat.setLineColor(rgb);
+
+                        if (yLineSeries.getLineAttributes().isSetThickness())
+                        {
+                            seriesFormat.setLineWeight(getLineWight(yLineSeries
+                                .getLineAttributes().getThickness()));
+                        }
+                    }
+                }
+                else
+                {
+                    int seriesIndex = ySeriesDefinition.getRunTimeSeries()
+                        .indexOf(ySeries);
+                    Palette seriesPalette = ySeriesDefinition
+                        .getSeriesPalette();
                     Fill paletteFill = FillUtil.getPaletteFill(
                         seriesPalette.getEntries(), seriesIndex);
-	                ColorDefinition color = FillUtil.getColor(paletteFill);
-	            	
-	                int rgb = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
-	                
-	                seriesFormat.setSolid();
-	            	seriesFormat.setForeColor(rgb);
-	            	seriesFormat.setBackColor(rgb);
-	            }
-	            
-	            chart.setSeriesFormat(series, seriesFormat);
-	            chart.setDataLabelFormat(series, labelFormat);
+                    ColorDefinition color = FillUtil.getColor(paletteFill);
+
+                    int rgb = new Color(color.getRed(), color.getGreen(),
+                        color.getBlue()).getRGB();
+
+                    seriesFormat.setSolid();
+                    seriesFormat.setForeColor(rgb);
+                    seriesFormat.setBackColor(rgb);
+                }
+
+                chart.setSeriesFormat(series, seriesFormat);
+                chart.setDataLabelFormat(series, labelFormat);
             }
-            catch(Exception e) 
+            catch (Exception e)
             {
-            	e.printStackTrace();
+                e.printStackTrace();
             }
         }
-        
-        if (chart.getChartType() != ChartShape.Scatter && chart.getChartType() != ChartShape.Bubble) 
-        	chart.setCategoryFormula(xFormula);
 
-        if (stacked) {
-        	chart.setPlotStacked(true);
-        	chart.setBarGapRatio(-100);
+        if (chart.getChartType() != ChartShape.Scatter
+            && chart.getChartType() != ChartShape.Bubble)
+            chart.setCategoryFormula(xFormula);
+
+        if (stacked)
+        {
+            chart.setPlotStacked(true);
+            chart.setBarGapRatio(-100);
         }
 
         Legend legend = chartWithAxes.getLegend();
-        
+
         if (legendVisisble(legend))
         {
-        	chart.setLegendPosition(legendPosition(legend));
+            chart.setLegendPosition(legendPosition(legend));
 
-        	ChartFormat legendFormat = chart.getLegendFormat();
+            ChartFormat legendFormat = chart.getLegendFormat();
             LineAttributes legendOutline = legend.getOutline();
-            
-			if (legendOutline.isSetVisible() && legendOutline.isVisible())
+
+            if (legendOutline.isSetVisible() && legendOutline.isVisible())
             {
-            	legendFormat.setLineStyle(getLineStyle(legendOutline.getStyle()));
-            	
+                legendFormat
+                    .setLineStyle(getLineStyle(legendOutline.getStyle()));
+
                 if (legendOutline.isSetThickness())
                 {
-                	legendFormat.setLineWeight(getLineWight(legendOutline.getThickness()));
+                    legendFormat.setLineWeight(getLineWight(legendOutline
+                        .getThickness()));
                 }
             }
             else
             {
                 legendFormat.setLineNone();
             }
-            
+
             chart.setLegendFormat(legendFormat);
         }
         else
         {
-        	chart.setLegendVisible(false);
+            chart.setLegendVisible(false);
         }
-        
+
         /*
-        for (int i = 0; i < ySeriesCount; i++)
-        {
-            chart.addSeries();
-            
-            if (chart.getChartType() == ChartShape.Scatter)
-            	chart.setSeriesXValueFormula(i, sheetName + "!" + xRanges[i]);
-            	
-            chart.setSeriesYValueFormula(i, sheetName + "!" + yRanges[i]);
-            chart.setSeriesYAxisIndex(i, yAxisIndexes.get(i));
-
-            
-        }
-
-        chart.setTitle(chartTitle);
-        chart.setAxisTitle(ChartShape.XAxis, 0, xAxis.getTitle()
-            .getCaption().getValue());
-
-        AxisType type = xAxis.getType();
-        switch (type)
-        {
-            case LINEAR_LITERAL:
-                break;
-            case DATE_TIME_LITERAL:
-                break;
-            case TEXT_LITERAL:
-                break;
-            case LOGARITHMIC_LITERAL:
-                chart.setLogScale(true);
-                break;
-        }
-*/
+         * for (int i = 0; i < ySeriesCount; i++) { chart.addSeries(); if
+         * (chart.getChartType() == ChartShape.Scatter)
+         * chart.setSeriesXValueFormula(i, sheetName + "!" + xRanges[i]);
+         * chart.setSeriesYValueFormula(i, sheetName + "!" + yRanges[i]);
+         * chart.setSeriesYAxisIndex(i, yAxisIndexes.get(i)); }
+         * chart.setTitle(chartTitle); chart.setAxisTitle(ChartShape.XAxis, 0,
+         * xAxis.getTitle() .getCaption().getValue()); AxisType type =
+         * xAxis.getType(); switch (type) { case LINEAR_LITERAL: break; case
+         * DATE_TIME_LITERAL: break; case TEXT_LITERAL: break; case
+         * LOGARITHMIC_LITERAL: chart.setLogScale(true); break; }
+         */
     }
 
-	private void applyFormatSpecifier(ChartFormat chartFormat, FormatSpecifier formatSpec) throws Exception
-	{
-		if (formatSpec instanceof NumberFormatSpecifier) 
-		{
-			NumberFormatSpecifier nfs = (NumberFormatSpecifier) formatSpec;
-			
-			if (nfs.isSetFractionDigits()) 
-			{
-				String fractionMask = getFormatMask(nfs);
-				
-				if (fractionMask.length() > 0)
-				{
-					chartFormat.setCustomFormat("# ##0." + fractionMask.toString());
-				}
-				else
-				{
-					chartFormat.setCustomFormat("# ##0");
-				}
-			}
-		}
-	}
+    private void applyFormatSpecifier(ChartFormat chartFormat,
+        FormatSpecifier formatSpec) throws Exception
+    {
+        if (formatSpec instanceof NumberFormatSpecifier)
+        {
+            NumberFormatSpecifier nfs = (NumberFormatSpecifier) formatSpec;
 
-	private String getFormatMask(NumberFormatSpecifier nfs)
-	{
-		int numDigits = nfs.getFractionDigits();
-		StringBuilder fraction = new StringBuilder();
-		
-		for (int i = 0; i < numDigits; i++)
-		{
-			fraction.append("0");
-		}
-		
-		return fraction.toString();
-	}
+            if (nfs.isSetFractionDigits())
+            {
+                String fractionMask = getFormatMask(nfs);
 
-	private FormatSpecifier getDataPointFormat(Series series)
-	{
-		EList<DataPointComponent> dataPoints = series.getDataPoint().getComponents();
-		
-		if (dataPoints.size() > 0)
-		{
-			return dataPoints.get(0).getFormatSpecifier();
-		}
-		
-		return null;
-	}
+                if (fractionMask.length() > 0)
+                {
+                    chartFormat.setCustomFormat("# ##0."
+                        + fractionMask.toString());
+                }
+                else
+                {
+                    chartFormat.setCustomFormat("# ##0");
+                }
+            }
+        }
+    }
 
-	private short getLineStyle(LineStyle style)
-	{
-		switch (style)
-		{
-			case SOLID_LITERAL:
-				return ChartFormat.LineSolid;
-			case DASHED_LITERAL:
-				return ChartFormat.LineDash;
-			case DOTTED_LITERAL:
-				return ChartFormat.LineDot;
-			case DASH_DOTTED_LITERAL:
-				return ChartFormat.LineDashDot;
-				
-			default:
-				return ChartFormat.LineSolid;
-		}
-	}
+    private String getFormatMask(NumberFormatSpecifier nfs)
+    {
+        int numDigits = nfs.getFractionDigits();
+        StringBuilder fraction = new StringBuilder();
 
-	private int getLineWight(int thickness)
-	{
-		switch (thickness)
-		{
-			case 1:
-				return ChartFormat.Hairline;
-			case 2:
-				return ChartFormat.Narrow;
-			case 3:
-				return ChartFormat.Medium;
-			case 4:
-				return ChartFormat.Wide;
-				
-			default:
-				return ChartFormat.Medium;
-		}
-	}
+        for (int i = 0; i < numDigits; i++)
+        {
+            fraction.append("0");
+        }
 
-	private void applySeriesMarker(Marker marker, int rgb, ChartFormat seriesFormat) throws Exception
-	{
-		if (marker.isSetVisible() && marker.isVisible())
-		{
+        return fraction.toString();
+    }
+
+    private FormatSpecifier getDataPointFormat(Series series)
+    {
+        EList<DataPointComponent> dataPoints = series.getDataPoint()
+            .getComponents();
+
+        if (dataPoints.size() > 0)
+        {
+            return dataPoints.get(0).getFormatSpecifier();
+        }
+
+        return null;
+    }
+
+    private short getLineStyle(LineStyle style)
+    {
+        switch (style)
+        {
+            case SOLID_LITERAL:
+                return ChartFormat.LineSolid;
+            case DASHED_LITERAL:
+                return ChartFormat.LineDash;
+            case DOTTED_LITERAL:
+                return ChartFormat.LineDot;
+            case DASH_DOTTED_LITERAL:
+                return ChartFormat.LineDashDot;
+
+            default:
+                return ChartFormat.LineSolid;
+        }
+    }
+
+    private int getLineWight(int thickness)
+    {
+        switch (thickness)
+        {
+            case 1:
+                return ChartFormat.Hairline;
+            case 2:
+                return ChartFormat.Narrow;
+            case 3:
+                return ChartFormat.Medium;
+            case 4:
+                return ChartFormat.Wide;
+
+            default:
+                return ChartFormat.Medium;
+        }
+    }
+
+    private void applySeriesMarker(Marker marker, int rgb,
+        ChartFormat seriesFormat) throws Exception
+    {
+        if (marker.isSetVisible() && marker.isVisible())
+        {
             seriesFormat.setMarkerBackground(rgb);
             seriesFormat.setMarkerForeground(rgb);
-			
-			MarkerType mtype = marker.getType();
-			
-		    switch (mtype.getValue())
-		    {
-		        case MarkerType.CROSSHAIR:
-		            seriesFormat
-		            	.setMarkerStyle(ChartFormat.MarkerPlus);
-		            break;
-		            
-		        case MarkerType.NABLA:
-		        case MarkerType.TRIANGLE:
-		            seriesFormat
-		                .setMarkerStyle(ChartFormat.MarkerTriangle);
-		            break;
-		            
-		        case MarkerType.RECTANGLE:
-		        case MarkerType.BOX:
-		        case MarkerType.COLUMN:
-		            seriesFormat
-		            	.setMarkerStyle(ChartFormat.MarkerSquare);
-		            break;
-		            
-		        case MarkerType.CIRCLE:
-		        case MarkerType.ELLIPSE:
-		            seriesFormat
-		                .setMarkerStyle(ChartFormat.MarkerCircle);
-		            break;
-		            
-		        case MarkerType.FOUR_DIAMONDS:
-		        case MarkerType.DIAMOND:
-		            seriesFormat
-		                .setMarkerStyle(ChartFormat.MarkerDiamond);
-		            break;
-		            
-		        case MarkerType.STAR:
-		            seriesFormat.setMarkerStyle(ChartFormat.MarkerStar);
-		            break;
-		            
-		        case MarkerType.CROSS:
-		            seriesFormat
-		            .setMarkerStyle(ChartFormat.MarkerX);
-		            break;
-		            
-		        case MarkerType.SEMI_CIRCLE:
-		            break;
-		            
-		        case MarkerType.HEXAGON:
-		            break;
-		            
-		        case MarkerType.ICON:
-		            break;
-		    }
-		}
-		else
-		{
-		    seriesFormat.setMarkerStyle(ChartFormat.MarkerNone); // ChartFormat.MarkerNone
-		}
-	}
-    
-	private void applySeriesLabels(Series series, ChartFormat seriesFormat) throws Exception
-	{
-		if (series.getLabel().isVisible())
-		{
-			seriesFormat.setDataLabelType(ChartFormat.DataLabelValue);
-			
-			Position position = series.getLabelPosition();
-			
-			switch (position)
-			{
-				case LEFT_LITERAL:
-					seriesFormat.setDataLabelPosition(ChartFormat.DataLabelPositionLeft);
-					break;
-					
-				case ABOVE_LITERAL:
-					seriesFormat.setDataLabelPosition(ChartFormat.DataLabelPositionAbove);
-					break;
 
-				case RIGHT_LITERAL:
-					seriesFormat.setDataLabelPosition(ChartFormat.DataLabelPositionRight);
-					break;
+            MarkerType mtype = marker.getType();
 
-				case BELOW_LITERAL:
-					seriesFormat.setDataLabelPosition(ChartFormat.DataLabelPositionBelow);
-					break;
+            switch (mtype.getValue())
+            {
+                case MarkerType.CROSSHAIR:
+                    seriesFormat.setMarkerStyle(ChartFormat.MarkerPlus);
+                    break;
 
-				case INSIDE_LITERAL:
-					seriesFormat.setDataLabelPosition(ChartFormat.DataLabelPositionCenter);
-					break;
-					
-				default:
-					seriesFormat.setDataLabelPosition(ChartFormat.DataLabelPositionAuto);
-			}
-			
-    		applyTextFormat(series.getLabel().getCaption(), seriesFormat);
-		}
-	}
+                case MarkerType.NABLA:
+                case MarkerType.TRIANGLE:
+                    seriesFormat.setMarkerStyle(ChartFormat.MarkerTriangle);
+                    break;
 
-	private static short seriesType(Series s) {
-    	if (s instanceof BarSeries) 
-    		return ChartShape.Column;
-		
-    	if (s instanceof AreaSeries) 
-    		return ChartShape.Area;
-    	
-    	if (s instanceof ScatterSeries) 
-    		return ChartShape.Scatter;
+                case MarkerType.RECTANGLE:
+                case MarkerType.BOX:
+                case MarkerType.COLUMN:
+                    seriesFormat.setMarkerStyle(ChartFormat.MarkerSquare);
+                    break;
 
-    	if (s instanceof LineSeries)
-    		return ChartShape.Line;
-    	
-    	throw new IllegalStateException("Not supported " + s.getClass().getName());
+                case MarkerType.CIRCLE:
+                case MarkerType.ELLIPSE:
+                    seriesFormat.setMarkerStyle(ChartFormat.MarkerCircle);
+                    break;
+
+                case MarkerType.FOUR_DIAMONDS:
+                case MarkerType.DIAMOND:
+                    seriesFormat.setMarkerStyle(ChartFormat.MarkerDiamond);
+                    break;
+
+                case MarkerType.STAR:
+                    seriesFormat.setMarkerStyle(ChartFormat.MarkerStar);
+                    break;
+
+                case MarkerType.CROSS:
+                    seriesFormat.setMarkerStyle(ChartFormat.MarkerX);
+                    break;
+
+                case MarkerType.SEMI_CIRCLE:
+                    break;
+
+                case MarkerType.HEXAGON:
+                    break;
+
+                case MarkerType.ICON:
+                    break;
+            }
+        }
+        else
+        {
+            seriesFormat.setMarkerStyle(ChartFormat.MarkerNone); // ChartFormat.MarkerNone
+        }
+    }
+
+    private void applySeriesLabels(Series series, ChartFormat seriesFormat)
+        throws Exception
+    {
+        if (series.getLabel().isVisible())
+        {
+            seriesFormat.setDataLabelType(ChartFormat.DataLabelValue);
+
+            Position position = series.getLabelPosition();
+
+            switch (position)
+            {
+                case LEFT_LITERAL:
+                    seriesFormat
+                        .setDataLabelPosition(ChartFormat.DataLabelPositionLeft);
+                    break;
+
+                case ABOVE_LITERAL:
+                    seriesFormat
+                        .setDataLabelPosition(ChartFormat.DataLabelPositionAbove);
+                    break;
+
+                case RIGHT_LITERAL:
+                    seriesFormat
+                        .setDataLabelPosition(ChartFormat.DataLabelPositionRight);
+                    break;
+
+                case BELOW_LITERAL:
+                    seriesFormat
+                        .setDataLabelPosition(ChartFormat.DataLabelPositionBelow);
+                    break;
+
+                case INSIDE_LITERAL:
+                    seriesFormat
+                        .setDataLabelPosition(ChartFormat.DataLabelPositionCenter);
+                    break;
+
+                default:
+                    seriesFormat
+                        .setDataLabelPosition(ChartFormat.DataLabelPositionAuto);
+            }
+
+            applyTextFormat(series.getLabel().getCaption(), seriesFormat);
+        }
+    }
+
+    private static short seriesType(Series s)
+    {
+        if (s instanceof BarSeries)
+            return ChartShape.Column;
+
+        if (s instanceof AreaSeries)
+            return ChartShape.Area;
+
+        if (s instanceof ScatterSeries)
+            return ChartShape.Scatter;
+
+        if (s instanceof LineSeries)
+            return ChartShape.Line;
+
+        throw new IllegalStateException("Not supported "
+            + s.getClass().getName());
     }
 
     protected void exportImage(IImageArea image, XlsCell cell) throws Exception
