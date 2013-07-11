@@ -32,6 +32,7 @@ import org.uguess.birt.report.engine.spreadsheet.model.util.CellPool;
 import org.uguess.birt.report.engine.spreadsheet.model.util.ColumnPool;
 import org.uguess.birt.report.engine.spreadsheet.model.util.ModelConstants;
 import org.uguess.birt.report.engine.spreadsheet.model.util.RowPool;
+import org.uguess.birt.report.engine.spreadsheet.wrapper.Coordinate;
 
 
 /**
@@ -54,6 +55,8 @@ public class SheetImpl extends BlockImpl implements Sheet
     private final CellPool cellPool;
     private final RowPool rowPool;
     private final ColumnPool columnPool;
+    
+    private HashMap<String, Coordinate> tableCoordMap;
 
     public static Sheet create(String name, Style style)
     {
@@ -79,6 +82,8 @@ public class SheetImpl extends BlockImpl implements Sheet
         defaultRow.setHeight(10);
         defaultColumn = ColumnImpl.create(getStyle());
         defaultColumn.setWidth(20);
+        
+        tableCoordMap = new HashMap<String, Coordinate>();
     }
 
     public int getActiveRowRange()
@@ -473,5 +478,15 @@ public class SheetImpl extends BlockImpl implements Sheet
     public Iterator<MergeBlock> mergesIterator()
     {
         return merges.iterator();
+    }
+
+    public Coordinate getTableCoord(String name)
+    {
+        return tableCoordMap.get(name);
+    }
+    
+    public void addTableCoord(String name, Coordinate coord)
+    {
+        tableCoordMap.put(name, coord);
     }
 }

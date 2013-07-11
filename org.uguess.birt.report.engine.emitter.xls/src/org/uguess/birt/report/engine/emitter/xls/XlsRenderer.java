@@ -25,12 +25,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -91,13 +93,15 @@ import org.apache.commons.jexl.parser.SimpleNode;
 import org.eclipse.birt.chart.computation.DataSetIterator;
 import org.eclipse.birt.chart.computation.IConstants;
 import org.eclipse.birt.chart.computation.ValueFormatter;
+import org.eclipse.birt.chart.device.DisplayAdapter;
+import org.eclipse.birt.chart.device.IDisplayServer;
+import org.eclipse.birt.chart.exception.ChartException;
 import org.eclipse.birt.chart.factory.GeneratedChartState;
 import org.eclipse.birt.chart.model.Chart;
 import org.eclipse.birt.chart.model.ChartWithAxes;
 import org.eclipse.birt.chart.model.attribute.AxisType;
 import org.eclipse.birt.chart.model.attribute.ColorDefinition;
 import org.eclipse.birt.chart.model.attribute.DataPointComponent;
-import org.eclipse.birt.chart.model.attribute.DataPointComponentType;
 import org.eclipse.birt.chart.model.attribute.Fill;
 import org.eclipse.birt.chart.model.attribute.FormatSpecifier;
 import org.eclipse.birt.chart.model.attribute.JavaNumberFormatSpecifier;
@@ -110,6 +114,7 @@ import org.eclipse.birt.chart.model.attribute.Palette;
 import org.eclipse.birt.chart.model.attribute.Position;
 import org.eclipse.birt.chart.model.attribute.Text;
 import org.eclipse.birt.chart.model.component.Axis;
+import org.eclipse.birt.chart.model.component.Grid;
 import org.eclipse.birt.chart.model.component.Scale;
 import org.eclipse.birt.chart.model.component.Series;
 import org.eclipse.birt.chart.model.data.DataSet;
@@ -120,6 +125,7 @@ import org.eclipse.birt.chart.model.type.AreaSeries;
 import org.eclipse.birt.chart.model.type.BarSeries;
 import org.eclipse.birt.chart.model.type.LineSeries;
 import org.eclipse.birt.chart.model.type.ScatterSeries;
+import org.eclipse.birt.chart.reportitem.ChartReportItemImpl;
 import org.eclipse.birt.chart.util.ChartUtil;
 import org.eclipse.birt.chart.util.FillUtil;
 import org.eclipse.birt.report.engine.api.IHTMLActionHandler;
@@ -145,6 +151,7 @@ import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
+import org.eclipse.birt.report.model.core.DesignElement;
 import org.eclipse.emf.common.util.EList;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AggregateFrame;
@@ -152,6 +159,7 @@ import org.uguess.birt.report.engine.layout.wrapper.impl.AreaFrame;
 import org.uguess.birt.report.engine.spreadsheet.model.Cell;
 import org.uguess.birt.report.engine.spreadsheet.model.MergeBlock;
 import org.uguess.birt.report.engine.spreadsheet.model.Sheet;
+import org.uguess.birt.report.engine.spreadsheet.wrapper.Coordinate;
 import org.uguess.birt.report.engine.spreadsheet.wrapper.Transformer;
 import org.uguess.birt.report.engine.util.EngineUtil;
 import org.uguess.birt.report.engine.util.ImageUtil;
@@ -181,6 +189,8 @@ public class XlsRenderer implements IAreaVisitor
     protected static final int COMMENTS_HEIGHT_IN_ROW = 5;
     private static final String ATTR_LANDSCAPE = "landscape"; //$NON-NLS-1$
     private static final boolean DEBUG;
+
+    private static final String DATA_BINDING_REF = "dataBindingRef";
 
     static
     {
@@ -219,6 +229,8 @@ public class XlsRenderer implements IAreaVisitor
     private List<GeneratedChartState> chartStates = new ArrayList<GeneratedChartState>();
 
     private ChartUtil.CacheDateFormat cacheDateFormat;
+
+    private ArrayList<Sheet> modelSheets = new ArrayList<Sheet>();
 
     public void initialize(IEmitterServices services)
     {
@@ -328,6 +340,7 @@ public class XlsRenderer implements IAreaVisitor
         {
             removeEmptyRow = OptionParser.parseBoolean(value);
         }
+        removeEmptyRow = true;
 
         value = xlsOption.get(XlsEmitterConfig.KEY_SHOW_GRID_LINES);
         if (value != null)
@@ -637,6 +650,9 @@ public class XlsRenderer implements IAreaVisitor
 
     public void start(IReportContent rc)
     {
+        chartCells.clear();
+        modelSheets.clear();
+
         if (DEBUG)
         {
             timeCounter = System.currentTimeMillis();
@@ -962,7 +978,8 @@ public class XlsRenderer implements IAreaVisitor
 
     protected boolean isEffectiveCell(Cell cell)
     {
-        if (cell.isEmpty())
+        // if (cell.isEmpty())
+        if (cell.getValue() == null)
         {
             return false;
         }
@@ -1016,6 +1033,8 @@ public class XlsRenderer implements IAreaVisitor
     private void doExportSheet(Sheet modelSheet, boolean landscape)
         throws Exception
     {
+        modelSheets.add(modelSheet);
+
         if (++sheetNum > 0)
         {
             workbook.insertSheets(sheetNum, 1);
@@ -1063,6 +1082,7 @@ public class XlsRenderer implements IAreaVisitor
         }
 
         boolean[] nonBlankRow = new boolean[rowCount];
+        boolean[] emptyColumn = new boolean[columnCount];
 
         if (removeEmptyRow)
         {
@@ -1080,6 +1100,28 @@ public class XlsRenderer implements IAreaVisitor
                     }
                 }
             }
+
+            // check blank columns
+            for (int j = 0; j < columnCount; j++)
+            {
+                emptyColumn[j] = true;
+
+                for (int i = 0; i < rowCount; i++)
+                {
+                    Cell cell = modelSheet.getCell(i, j, false);
+
+                    if (cell != null && isEffectiveCell(cell))
+                    {
+                        emptyColumn[j] = false;
+                        break;
+                    }
+                }
+
+                if (!emptyColumn[j])
+                {
+                    break;
+                }
+            }
         }
 
         for (short i = 0; i < columnCount; i++)
@@ -1087,7 +1129,14 @@ public class XlsRenderer implements IAreaVisitor
             double width = modelSheet.getColumnWidth(i)
                 / (1000 * baseCharWidth);
 
-            workbook.setColWidth(i, (short) (width * 256));
+            if (!removeEmptyRow || !emptyColumn[i])
+            {
+                workbook.setColWidth(i, (short) (width * 256));
+            }
+            else
+            {
+                workbook.setColWidth(i, 50);
+            }
         }
 
         RangeStyle emptyCellStyle = processor.getEmptyCellStyle(false);
@@ -1291,7 +1340,9 @@ public class XlsRenderer implements IAreaVisitor
         Object oCachedJavaFormatter) throws Exception
     {
         if (val == null)
+        {
             return;
+        }
 
         if (valType == IConstants.NUMERICAL && val instanceof Number)
         {
@@ -1456,11 +1507,6 @@ public class XlsRenderer implements IAreaVisitor
         }
 
         ChartWithAxes chartWithAxes = (ChartWithAxes) chartModel;
-
-        // Создаем страницу для данных графика
-        sheetNum++;
-        workbook.insertSheets(sheetNum, 1);
-
         String chartTitle = null;
 
         if (chartWithAxes.getTitle().isVisible())
@@ -1478,11 +1524,27 @@ public class XlsRenderer implements IAreaVisitor
             chart.setTitle(chartTitle);
         }
 
-        String sheetName = chartDataSheetName(
-            workbook.getSheetName(cell.sheet), chartTitle, chartIndex);
+        // Создаем страницу для данных графика
+        boolean isChartNeedExtraDataSheet = isChartNeedExtraDataSheet(workbook,
+            cell, generatedChartState);
 
-        workbook.setSheetName(sheetNum, sheetName);
-        workbook.setSheet(sheetNum);
+        String sheetName = null;
+
+        if (isChartNeedExtraDataSheet)
+        {
+            sheetNum++;
+            workbook.insertSheets(sheetNum, 1);
+
+            sheetName = chartDataSheetName(workbook.getSheetName(cell.sheet),
+                chartTitle, chartIndex);
+
+            workbook.setSheetName(sheetNum, sheetName);
+            workbook.setSheet(sheetNum);
+        }
+        else
+        {
+            sheetName = workbook.getSheetName(cell.sheet);
+        }
 
         // support only one x axis
         Axis[] baseAxes = chartWithAxes.getBaseAxes();
@@ -1505,6 +1567,9 @@ public class XlsRenderer implements IAreaVisitor
         ArrayList<String> seriesNames = new ArrayList<String>();
         ArrayList<Series> ySerieses = new ArrayList<Series>();
 
+        String xFormula = null;
+        ArrayList<String> yFormulas = new ArrayList<String>();
+
         for (Axis axis : allAxes)
         {
             Text c = axis.getTitle().getCaption();
@@ -1522,6 +1587,11 @@ public class XlsRenderer implements IAreaVisitor
                 || allAxes.size() > 2)
             {
                 c = axis.getLabel().getCaption();
+
+                // chart.setMajorGridVisible(xyAxis, yAxises,
+                // isGridVisible(axis.getMajorGrid()));
+                // chart.setMinorGridVisible(xyAxis, yAxises,
+                // isGridVisible(axis.getMinorGrid()));
 
                 axisFormat = chart.getAxisFormat(xyAxis, yAxises);
                 applyTextFormat(c, axisFormat);
@@ -1541,6 +1611,8 @@ public class XlsRenderer implements IAreaVisitor
 
                 if (axis.getType() == AxisType.LINEAR_LITERAL)
                 {
+                    boolean isMinSet = false;
+                    boolean isMaxSet = false;
                     double min = 0;
                     double max = 0;
                     Scale scale = axis.getScale();
@@ -1554,6 +1626,7 @@ public class XlsRenderer implements IAreaVisitor
                         {
                             chart.setAutoMinimumScale(xyAxis, yAxises, false);
                             min = numberDataElement.getValue();
+                            isMinSet = true;
                         }
                     }
 
@@ -1566,10 +1639,14 @@ public class XlsRenderer implements IAreaVisitor
                         {
                             chart.setAutoMaximumScale(xyAxis, yAxises, false);
                             max = numberDataElement.getValue();
+                            isMaxSet = true;
                         }
                     }
 
-                    chart.setScaleValueRange(xyAxis, yAxises, min, max);
+                    if (isMinSet || isMaxSet)
+                    {
+                        chart.setScaleValueRange(xyAxis, yAxises, min, max);
+                    }
                 }
 
                 chart.setAxisFormat(xyAxis, yAxises, axisFormat);
@@ -1609,7 +1686,10 @@ public class XlsRenderer implements IAreaVisitor
                     String seriesTitle = series.getSeriesIdentifier()
                         .toString();
 
-                    workbook.setText(1, col, seriesTitle);
+                    if (isChartNeedExtraDataSheet)
+                    {
+                        workbook.setText(1, col, seriesTitle);
+                    }
 
                     DataSet dataSet = series.getDataSet();
 
@@ -1627,13 +1707,66 @@ public class XlsRenderer implements IAreaVisitor
 
                     Object[] values = (Object[]) dataSet.getValues();
 
+                    if (!isChartNeedExtraDataSheet)
+                    {
+                        String chartDataSource = getChartDataSource(generatedChartState);
+
+                        if (chartDataSource != null)
+                        {
+                            Sheet sheet = modelSheets.get(cell.sheet);
+
+                            Coordinate tableCoord = sheet
+                                .getTableCoord(chartDataSource);
+                            Coordinate dataCoord = null;
+
+                            if (tableCoord != null)
+                            {
+                                Object[] formattedValues = new Object[values.length];
+
+                                for (int i = 0; i < values.length; i++)
+                                {
+                                    formattedValues[i] = convertChartValue(
+                                        workbook, 0, 0, values[i],
+                                        it.getDataType(), axisFormatSpec,
+                                        cachedFormat);
+                                }
+
+                                dataCoord = getDataCoord(workbook, cell.sheet,
+                                    tableCoord, formattedValues);
+
+                                if (dataCoord != null)
+                                {
+                                    if (col == 0)
+                                    {
+                                        xFormula = getChartSeriesFormula(
+                                            sheetName, dataCoord.getY1(),
+                                            dataCoord.getX1(),
+                                            dataCoord.getY2(),
+                                            dataCoord.getX2());
+                                    }
+                                    else
+                                    {
+                                        yFormulas.add(getChartSeriesFormula(
+                                            sheetName, dataCoord.getY1(),
+                                            dataCoord.getX1(),
+                                            dataCoord.getY2(),
+                                            dataCoord.getX2()));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if (seriesLen < values.length)
                         seriesLen = values.length;
 
-                    for (int i = 0; i < values.length; i++)
+                    if (isChartNeedExtraDataSheet)
                     {
-                        writeChartValue(workbook, 2 + i, col, values[i],
-                            it.getDataType(), axisFormatSpec, cachedFormat);
+                        for (int i = 0; i < values.length; i++)
+                        {
+                            writeChartValue(workbook, 2 + i, col, values[i],
+                                it.getDataType(), axisFormatSpec, cachedFormat);
+                        }
                     }
 
                     if (col != 0)
@@ -1648,37 +1781,54 @@ public class XlsRenderer implements IAreaVisitor
                 }
             }
 
-            if (beginCol + 1 < col)
+            if (isChartNeedExtraDataSheet)
             {
-                // Merge cells on title if needed.
-                RangeStyle rangeStyle = workbook.getRangeStyle(0, beginCol, 0,
-                    col - 1);
-                rangeStyle.setMergeCells(true);
-                rangeStyle
-                    .setHorizontalAlignment(RangeStyle.HorizontalAlignmentCenter);
-                workbook.setRangeStyle(rangeStyle, 0, beginCol, 0, col - 1);
-            }
+                if (beginCol + 1 < col)
+                {
+                    // Merge cells on title if needed.
+                    RangeStyle rangeStyle = workbook.getRangeStyle(0, beginCol,
+                        0, col - 1);
+                    rangeStyle.setMergeCells(true);
+                    rangeStyle
+                        .setHorizontalAlignment(RangeStyle.HorizontalAlignmentCenter);
+                    workbook.setRangeStyle(rangeStyle, 0, beginCol, 0, col - 1);
+                }
 
-            if (axisTitle != null && axisTitle.length() != 0
-                && !"X-Axis Title".equals(axisTitle)
-                && !"Y-Axis Title".equals(axisTitle))
-                workbook.setText(0, beginCol, axisTitle);
+                if (axisTitle != null && axisTitle.length() != 0
+                    && !"X-Axis Title".equals(axisTitle)
+                    && !"Y-Axis Title".equals(axisTitle))
+                    workbook.setText(0, beginCol, axisTitle);
+            }
         }
 
-        for (int i = 0; i <= allAxes.size(); i++)
+        if (isChartNeedExtraDataSheet)
         {
-            workbook.setColWidthAutoSize(i, true);
+            for (int i = 0; i <= allAxes.size(); i++)
+            {
+                workbook.setColWidthAutoSize(i, true);
+            }
         }
 
         chart.setChartType(ChartShape.Combination);
 
-        String xFormula = sheetName + "!" + workbook.formatRCNr(2, 0, true)
-            + ":" + workbook.formatRCNr(1 + seriesLen, 0, true);
+        if (isChartNeedExtraDataSheet)
+        {
+            xFormula = getChartSeriesFormula(sheetName, 2, 0, 1 + seriesLen, 0);
+        }
 
         for (int x = 1; x < col; x++)
         {
-            String yFormula = sheetName + "!" + workbook.formatRCNr(2, x, true)
-                + ":" + workbook.formatRCNr(1 + seriesLen, x, true);
+            String yFormula;
+
+            if (isChartNeedExtraDataSheet)
+            {
+                yFormula = getChartSeriesFormula(sheetName, 2, x,
+                    1 + seriesLen, x);
+            }
+            else
+            {
+                yFormula = yFormulas.remove(0);
+            }
 
             int series = x - 1;
 
@@ -2415,5 +2565,217 @@ public class XlsRenderer implements IAreaVisitor
                 return false;
             return true;
         }
+    }
+
+    private static Object getFieldAsPublic(Object obj, Class<?> clazz,
+        String field) throws SecurityException, NoSuchFieldException,
+        IllegalArgumentException, IllegalAccessException
+    {
+        Field f = clazz.getDeclaredField(field);
+        f.setAccessible(true);
+
+        return f.get(obj);
+    }
+
+    @SuppressWarnings("rawtypes")
+    private String getChartDataSource(GeneratedChartState generatedChartState)
+    {
+        IDisplayServer _ids = generatedChartState.getDisplayServer();
+
+        try
+        {
+            Object resourceFinder = getFieldAsPublic(_ids,
+                DisplayAdapter.class, "resourceFinder");
+            Object handle = getFieldAsPublic(resourceFinder,
+                ChartReportItemImpl.class, "handle");
+            Object element = getFieldAsPublic(handle,
+                ReportElementHandle.class, "element");
+            HashMap propValues = (HashMap) getFieldAsPublic(element,
+                DesignElement.class, "propValues");
+
+            if (propValues.containsKey(DATA_BINDING_REF))
+            {
+                return propValues.get(DATA_BINDING_REF).toString();
+            }
+            // else if (propValues.containsKey("dataSet"))
+            // {
+            // return propValues.get("dataSet").toString();
+            // }
+        }
+        catch (Exception e)
+        {
+            // e.printStackTrace();
+            return null;
+        }
+
+        return null;
+    }
+
+    private Coordinate getDataCoord(WorkBook workbook, int sheet,
+        Coordinate tableCoord, Object[] values) throws Exception
+    {
+        for (int row = tableCoord.getY1(); row <= tableCoord.getY2(); row++)
+        {
+            for (int col = tableCoord.getX1(); col <= tableCoord.getX2(); col++)
+            {
+                if (equals(values[0], workbook.getText(sheet, row, col)))
+                {
+                    int k = 1;
+
+                    while (k < values.length
+                        && equals(values[k],
+                            workbook.getText(sheet, row + k, col)))
+                    {
+                        k++;
+                    }
+
+                    if (k == values.length)
+                    {
+                        return new Coordinate(col, row, col, row + k - 1);
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static boolean equals(Object o1, Object o2)
+    {
+        return ((o1 != null) && (o2 != null) && (o1.equals(o2)))
+            || ((o1 == null) && (o2 == null));
+    }
+
+    /**
+     * @param workbook
+     * @param cell
+     * @param generatedChartState
+     * @return
+     * @throws ChartException
+     * @throws IllegalArgumentException
+     */
+    private boolean isChartNeedExtraDataSheet(WorkBook workbook, XlsCell cell,
+        GeneratedChartState generatedChartState)
+        throws IllegalArgumentException, ChartException
+    {
+        Chart chartModel = generatedChartState.getChartModel();
+        ChartWithAxes chartWithAxes = (ChartWithAxes) chartModel;
+
+        Axis[] baseAxes = chartWithAxes.getBaseAxes();
+        Axis xAxis = baseAxes[0];
+        Axis[] yAxes = chartWithAxes.getOrthogonalAxes(xAxis, true);
+
+        ArrayList<Axis> allAxes = new ArrayList<Axis>();
+        allAxes.add(xAxis);
+        allAxes.addAll(Arrays.asList(yAxes));
+
+        for (Axis axis : allAxes)
+        {
+            FormatSpecifier axisFormatSpec = axis.getFormatSpecifier();
+            EList<SeriesDefinition> seriesDefinitions = axis
+                .getSeriesDefinitions();
+
+            for (SeriesDefinition seriesDefinition : seriesDefinitions)
+            {
+                for (Series series : seriesDefinition.getRunTimeSeries())
+                {
+                    DataSet dataSet = series.getDataSet();
+                    DataSetIterator it = new DataSetIterator(dataSet);
+
+                    Object cachedFormat = null;
+
+                    if (it.getDataType() == IConstants.DATE_TIME)
+                    {
+                        int dateUnit = ChartUtil.computeDateTimeCategoryUnit(
+                            chartModel, it);
+
+                        cachedFormat = cacheDateFormat.get(dateUnit);
+                    }
+
+                    Object[] values = (Object[]) dataSet.getValues();
+
+                    String chartDataSource = getChartDataSource(generatedChartState);
+
+                    if (chartDataSource != null)
+                    {
+                        Sheet sheet = modelSheets.get(cell.sheet);
+
+                        Coordinate tableCoord = sheet
+                            .getTableCoord(chartDataSource);
+
+                        if (tableCoord != null)
+                        {
+                            try
+                            {
+                                Object[] formattedValues = new Object[values.length];
+
+                                for (int i = 0; i < values.length; i++)
+                                {
+                                    formattedValues[i] = convertChartValue(
+                                        workbook, 0, 0, values[i],
+                                        it.getDataType(), axisFormatSpec,
+                                        cachedFormat);
+                                }
+
+                                Coordinate dataCoord = getDataCoord(workbook,
+                                    cell.sheet, tableCoord, formattedValues);
+
+                                if (dataCoord == null)
+                                {
+                                    return true;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                e.printStackTrace();
+                                return true;
+                            }
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private String getChartSeriesFormula(String sheetName, int row1, int col1,
+        int row2, int col2) throws Exception
+    {
+        return sheetName + "!" + workbook.formatRCNr(row1, col1, true) + ":"
+            + workbook.formatRCNr(row2, col2, true);
+    }
+
+    private String convertChartValue(WorkBook workbook, int row, int col,
+        Object val, int valType, FormatSpecifier formatSpec,
+        Object oCachedJavaFormatter) throws Exception
+    {
+        String oldValue = workbook.getText(0, 0);
+
+        writeChartValue(workbook, 0, 0, val, valType, formatSpec,
+            oCachedJavaFormatter);
+
+        String result = workbook.getText(0, 0);
+        workbook.setText(0, 0, oldValue);
+
+        return result;
+    }
+
+    private boolean isGridVisible(Grid grid)
+    {
+        System.out.println("XlsRenderer.isGridVisible()");
+        System.out.println(grid.getLineAttributes().isSetVisible()
+            && grid.getLineAttributes().isVisible());
+
+        return grid.getLineAttributes().isSetVisible()
+            && grid.getLineAttributes().isVisible();
     }
 }

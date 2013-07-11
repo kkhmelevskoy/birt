@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.birt.report.engine.css.engine.StyleConstants;
+import org.eclipse.birt.report.engine.ir.GridItemDesign;
+import org.eclipse.birt.report.engine.ir.TableItemDesign;
 import org.eclipse.birt.report.engine.nLayout.area.IArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.CellArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.TableArea;
@@ -600,15 +602,6 @@ public class Transformer
             element = it.next();
             IArea area = getArea(element);
 
-            if (area instanceof TableArea)
-            {
-                TableArea tableArea = (TableArea) area;
-                System.out.println(tableArea.isCanShrink());
-                System.out.println(tableArea.isGridDesign());
-                System.out.println(tableArea.isIgnoreReordering());
-                System.out.println(tableArea.isInlineStacking());
-            }
-
             if (cellCoordinate != null)
             {
                 coord = cellCoordinate;
@@ -617,6 +610,35 @@ public class Transformer
             {
                 coord = getElementCoords(xCuts, yCuts, element, xOffset,
                     yOffset, sheet, defaultCell);
+            }
+
+            if (area instanceof TableArea)
+            {
+                try
+                {
+                    TableArea tableArea = (TableArea) area;
+
+                    Object generateBy = tableArea.getContent().getGenerateBy();
+
+                    if (generateBy instanceof TableItemDesign)
+                    {
+                        TableItemDesign tableItemDesign = (TableItemDesign) generateBy;
+
+                        Coordinate tableCoord = new Coordinate();
+
+                        tableCoord.x1 = coord.x1;
+                        tableCoord.x2 = coord.x2;
+                        tableCoord.y1 = coord.y1;
+                        tableCoord.y2 = coord.y2;
+
+                        sheet.addTableCoord(tableItemDesign.getName(),
+                            tableCoord);
+                    }
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
             }
 
             if (area instanceof CellArea)
@@ -712,33 +734,4 @@ public class Transformer
         return pos;
 
     }
-
-    static class Coordinate
-    {
-
-        int x1, y1, x2, y2;
-
-        void normalize()
-        {
-            int temp;
-            if (x1 > x2)
-            {
-                temp = x1;
-                x1 = x2;
-                x2 = temp;
-            }
-            if (y1 > y2)
-            {
-                temp = y1;
-                y1 = y2;
-                y2 = temp;
-            }
-        }
-
-        public String toString()
-        {
-            return "[" + x1 + ", " + y1 + ", " + x2 + ", " + y2 + "]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
-        }
-    }
-
 }
