@@ -148,6 +148,7 @@ import org.eclipse.birt.report.engine.nLayout.area.IContainerArea;
 import org.eclipse.birt.report.engine.nLayout.area.IImageArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITemplateArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.ListGroupArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
@@ -2777,5 +2778,50 @@ public class XlsRenderer implements IAreaVisitor
 
         return grid.getLineAttributes().isSetVisible()
             && grid.getLineAttributes().isVisible();
+    }
+
+    private String getPageTitle(PageArea pageArea)
+    {
+        Object listGroupArea = getChildOfClass(pageArea.getBody(),
+            ListGroupArea.class);
+
+        if (listGroupArea != null)
+        {
+            return (String) ((ListGroupArea) listGroupArea).getContent()
+                .getTOC();
+        }
+
+        return null;
+    }
+
+    private Object getChildOfClass(IContainerArea container, Class<?> clazz)
+    {
+        Object result = null;
+
+        if (container != null)
+        {
+            Iterator<IArea> children = container.getChildren();
+
+            while (children.hasNext())
+            {
+                IArea area = (IArea) children.next();
+
+                if (clazz.isInstance(area))
+                {
+                    result = area;
+                }
+                else if (area instanceof IContainerArea)
+                {
+                    result = getChildOfClass((IContainerArea) area, clazz);
+                }
+
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+        }
+
+        return null;
     }
 }
