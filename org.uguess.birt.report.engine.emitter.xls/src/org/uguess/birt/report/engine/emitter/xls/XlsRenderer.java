@@ -967,7 +967,15 @@ public class XlsRenderer implements IAreaVisitor
                 }
                 catch (Exception e)
                 {
-                    throw new RuntimeException(e);
+                    if (e.getMessage().contains(
+                        "Duplicate sheet names are not allowed."))
+                    {
+                        // do nothing, no critical error
+                    }
+                    else
+                    {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }
@@ -2808,11 +2816,15 @@ public class XlsRenderer implements IAreaVisitor
 
     private String getPageTitle(PageArea pageArea)
     {
-        return findSheetName(pageArea.getBody());
+        List<String> sheetNames = new ArrayList<String>();
+        findSheetNames(pageArea.getBody(), sheetNames);
+        
+        return sheetNames.isEmpty() ? null : sheetNames.get(sheetNames.size() - 1);
     }
 
-    private String findSheetName(IContainerArea container)
+    private void findSheetNames(IContainerArea container, List<String> sheetNames)
     {
+        boolean stopSearch = false;
         String sheetName = null;
 
         if (container instanceof ContainerArea)
@@ -2842,6 +2854,8 @@ public class XlsRenderer implements IAreaVisitor
                         if (content.getTOC() != null)
                         {
                             sheetName = content.getTOC().toString();
+                            // Имя заданное через TOC для группы наиболее важное
+                            stopSearch = sheetName != null;
                         }
                     }
                 }
@@ -2849,11 +2863,11 @@ public class XlsRenderer implements IAreaVisitor
 
             if (sheetName != null)
             {
-                return sheetName;
+                sheetNames.add(sheetName);
             }
         }
 
-        if (container != null)
+        if (container != null && !stopSearch)
         {
             Iterator<IArea> children = container.getChildren();
 
@@ -2863,16 +2877,9 @@ public class XlsRenderer implements IAreaVisitor
 
                 if (area instanceof IContainerArea)
                 {
-                    sheetName = findSheetName((IContainerArea) area);
-                }
-
-                if (sheetName != null)
-                {
-                    return sheetName;
+                    findSheetNames((IContainerArea) area, sheetNames);
                 }
             }
         }
-
-        return sheetName;
     }
 }

@@ -14,5 +14,6 @@ Require-Bundle: org.eclipse.core.runtime,
  org.uguess.birt.report.engine.common,
  org.eclipse.birt.chart.engine,
  com.ibm.icu,
- org.eclipse.birt.chart.engine
+ org.eclipse.birt.chart.engine,
+ org.eclipse.birt.chart.reportitem;bundle-version="3.7.2"
 Eclipse-LazyStart: true
