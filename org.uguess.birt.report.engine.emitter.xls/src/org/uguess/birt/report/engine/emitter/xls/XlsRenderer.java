@@ -136,11 +136,16 @@ import org.eclipse.birt.report.engine.api.impl.Action;
 import org.eclipse.birt.report.engine.content.IAutoTextContent;
 import org.eclipse.birt.report.engine.content.IContent;
 import org.eclipse.birt.report.engine.content.IHyperlinkAction;
+import org.eclipse.birt.report.engine.content.IListContent;
+import org.eclipse.birt.report.engine.content.IListGroupContent;
 import org.eclipse.birt.report.engine.content.IPageContent;
 import org.eclipse.birt.report.engine.content.IReportContent;
+import org.eclipse.birt.report.engine.content.ITableContent;
+import org.eclipse.birt.report.engine.content.ITableGroupContent;
 import org.eclipse.birt.report.engine.content.impl.PageContent;
 import org.eclipse.birt.report.engine.content.impl.ReportContent;
 import org.eclipse.birt.report.engine.emitter.IEmitterServices;
+import org.eclipse.birt.report.engine.ir.GroupDesign;
 import org.eclipse.birt.report.engine.ir.ReportElementDesign;
 import org.eclipse.birt.report.engine.nLayout.area.IArea;
 import org.eclipse.birt.report.engine.nLayout.area.IAreaVisitor;
@@ -148,12 +153,15 @@ import org.eclipse.birt.report.engine.nLayout.area.IContainerArea;
 import org.eclipse.birt.report.engine.nLayout.area.IImageArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITemplateArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.ContainerArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.ListGroupArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.TextArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
 import org.eclipse.birt.report.model.core.DesignElement;
 import org.eclipse.emf.common.util.EList;
+import org.uguess.birt.report.engine.emitter.xls.XlsRenderer2.TextAreaWrapper;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AggregateFrame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AreaFrame;
@@ -942,6 +950,24 @@ public class XlsRenderer implements IAreaVisitor
                             + (currentPageIndex) + "] using " //$NON-NLS-1$
                             + (System.currentTimeMillis() - span) + " ms"); //$NON-NLS-1$
                     }
+                }
+            }
+            String sheetName = getPageTitle(pa);
+
+            if (sheetName == null && currentPageIndex == 1)
+            {
+                sheetName = pa.getContent().getReportContent().getTitle();
+            }
+
+            if (sheetName != null)
+            {
+                try
+                {
+                    workbook.setSheetName(currentPageIndex - 1, sheetName);
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
                 }
             }
         }
@@ -2782,21 +2808,50 @@ public class XlsRenderer implements IAreaVisitor
 
     private String getPageTitle(PageArea pageArea)
     {
-        Object listGroupArea = getChildOfClass(pageArea.getBody(),
-            ListGroupArea.class);
-
-        if (listGroupArea != null)
-        {
-            return (String) ((ListGroupArea) listGroupArea).getContent()
-                .getTOC();
-        }
-
-        return null;
+        return findSheetName(pageArea.getBody());
     }
 
-    private Object getChildOfClass(IContainerArea container, Class<?> clazz)
+    private String findSheetName(IContainerArea container)
     {
-        Object result = null;
+        String sheetName = null;
+
+        if (container instanceof ContainerArea)
+        {
+            IContent content = ((ContainerArea) container).getContent();
+            if (content instanceof IListContent
+                || content instanceof ITableContent)
+            {
+                sheetName = content.getName();
+            }
+            else if (content instanceof IListGroupContent
+                || content instanceof ITableGroupContent)
+            {
+                Object groupDesignObject = content.getGenerateBy();
+                if (groupDesignObject instanceof GroupDesign)
+                {
+                    GroupDesign groupDesign = (GroupDesign) groupDesignObject;
+                    if (DesignChoiceConstants.PAGE_BREAK_BEFORE_ALWAYS
+                        .equals(groupDesign.getPageBreakBefore())
+                        || DesignChoiceConstants.PAGE_BREAK_BEFORE_ALWAYS_EXCLUDING_FIRST
+                            .equals(groupDesign.getPageBreakBefore())
+                        || DesignChoiceConstants.PAGE_BREAK_AFTER_ALWAYS
+                            .equals(groupDesign.getPageBreakAfter())
+                        || DesignChoiceConstants.PAGE_BREAK_AFTER_ALWAYS_EXCLUDING_LAST
+                            .equals(groupDesign.getPageBreakAfter()))
+                    {
+                        if (content.getTOC() != null)
+                        {
+                            sheetName = content.getTOC().toString();
+                        }
+                    }
+                }
+            }
+
+            if (sheetName != null)
+            {
+                return sheetName;
+            }
+        }
 
         if (container != null)
         {
@@ -2804,24 +2859,20 @@ public class XlsRenderer implements IAreaVisitor
 
             while (children.hasNext())
             {
-                IArea area = (IArea) children.next();
+                IArea area = children.next();
 
-                if (clazz.isInstance(area))
+                if (area instanceof IContainerArea)
                 {
-                    result = area;
-                }
-                else if (area instanceof IContainerArea)
-                {
-                    result = getChildOfClass((IContainerArea) area, clazz);
+                    sheetName = findSheetName((IContainerArea) area);
                 }
 
-                if (result != null)
+                if (sheetName != null)
                 {
-                    return result;
+                    return sheetName;
                 }
             }
         }
 
-        return null;
+        return sheetName;
     }
 }

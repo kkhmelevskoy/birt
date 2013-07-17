@@ -533,11 +533,21 @@ public class XlsRenderer2 extends XlsRenderer
 
         public String getText()
         {
+            if (" ".equals(text))
+            {
+                text = "";
+            }
+            
             return text;
         }
 
         public String getLogicalOrderText()
         {
+            if (" ".equals(logicText))
+            {
+                logicText = "";
+            }
+            
             return logicText;
         }
 
