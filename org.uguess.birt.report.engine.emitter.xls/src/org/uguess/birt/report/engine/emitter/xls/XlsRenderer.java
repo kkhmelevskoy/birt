@@ -2254,39 +2254,44 @@ public class XlsRenderer implements IAreaVisitor
 
     protected void exportText(String csCellText, XlsCell cell) throws Exception
     {
-        Double csNumberValue;
-        try
+        if (csCellText != null && !csCellText.isEmpty())
         {
-            csNumberValue = Double.parseDouble(csCellText.replace(',', '.'));
-        }
-        catch (NumberFormatException e)
-        {
-            csNumberValue = null;
-        }
-
-        BigDecimal bigValue = null;
-        try
-        {
-            bigValue = new BigDecimal(csCellText.replace(',', '.'));
-        }
-        catch (NumberFormatException e)
-        {
-            bigValue = null;
-        }
-
-        if (csNumberValue == null || csNumberValue.isNaN())
-        {
-            workbook.setText(cell.sheet, cell.y, cell.x, csCellText);
-        }
-        else
-        {
-            if (bigValue == null || bigValue.precision() < 20)
+            Double csNumberValue;
+            try
             {
-                workbook.setNumber(cell.sheet, cell.y, cell.x, csNumberValue);
+                csNumberValue = Double
+                    .parseDouble(csCellText.replace(',', '.'));
+            }
+            catch (NumberFormatException e)
+            {
+                csNumberValue = null;
+            }
+
+            BigDecimal bigValue = null;
+            try
+            {
+                bigValue = new BigDecimal(csCellText.replace(',', '.'));
+            }
+            catch (NumberFormatException e)
+            {
+                bigValue = null;
+            }
+
+            if (csNumberValue == null || csNumberValue.isNaN())
+            {
+                workbook.setText(cell.sheet, cell.y, cell.x, csCellText);
             }
             else
             {
-                workbook.setText(cell.sheet, cell.y, cell.x, csCellText);
+                if (bigValue == null || bigValue.precision() < 20)
+                {
+                    workbook.setNumber(cell.sheet, cell.y, cell.x,
+                        csNumberValue);
+                }
+                else
+                {
+                    workbook.setText(cell.sheet, cell.y, cell.x, csCellText);
+                }
             }
         }
     }
@@ -2818,11 +2823,13 @@ public class XlsRenderer implements IAreaVisitor
     {
         List<String> sheetNames = new ArrayList<String>();
         findSheetNames(pageArea.getBody(), sheetNames);
-        
-        return sheetNames.isEmpty() ? null : sheetNames.get(sheetNames.size() - 1);
+
+        return sheetNames.isEmpty() ? null : sheetNames
+            .get(sheetNames.size() - 1);
     }
 
-    private void findSheetNames(IContainerArea container, List<String> sheetNames)
+    private void findSheetNames(IContainerArea container,
+        List<String> sheetNames)
     {
         boolean stopSearch = false;
         String sheetName = null;
