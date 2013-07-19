@@ -192,6 +192,7 @@ import com.smartxls.WorkBook;
 public class XlsRenderer implements IAreaVisitor
 {
 
+    private static final int MAX_SHEET_NAME_LENGTH = 31;
     public static final String DEFAULT_FILE_NAME = "report.xls"; //$NON-NLS-1$
     protected static final String XLS_IDENTIFIER = "xls"; //$NON-NLS-1$
     protected static final int COMMENTS_WIDTH_IN_COLUMN = 3;
@@ -961,6 +962,10 @@ public class XlsRenderer implements IAreaVisitor
 
             if (sheetName != null)
             {
+                if (sheetName.length() > MAX_SHEET_NAME_LENGTH)
+                {
+                    sheetName = sheetName.substring(0, MAX_SHEET_NAME_LENGTH);
+                }
                 try
                 {
                     workbook.setSheetName(currentPageIndex - 1, sheetName);
@@ -1439,9 +1444,9 @@ public class XlsRenderer implements IAreaVisitor
             name.append(title);
         }
 
-        if (name.length() > 31)
+        if (name.length() > MAX_SHEET_NAME_LENGTH)
         {
-            name.setLength(31); // Make sure that name is not too long for excel
+            name.setLength(MAX_SHEET_NAME_LENGTH); // Make sure that name is not too long for excel
                                 // sheet name.
         }
 
