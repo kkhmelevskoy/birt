@@ -2836,7 +2836,7 @@ public class XlsRenderer implements IAreaVisitor
     private void findSheetNames(IContainerArea container,
         List<String> sheetNames)
     {
-        boolean stopSearch = false;
+        boolean useOnlyToc = false;
         String sheetName = null;
 
         if (container instanceof ContainerArea)
@@ -2845,7 +2845,15 @@ public class XlsRenderer implements IAreaVisitor
             if (content instanceof IListContent
                 || content instanceof ITableContent)
             {
-                sheetName = content.getName();
+                if (!useOnlyToc)
+                {
+                    sheetName = content.getName();
+                }
+                if (sheetName == null && content.getTOC() != null)
+                {
+                    sheetName = content.getTOC().toString();
+                    useOnlyToc = true;
+                }
             }
             else if (content instanceof IListGroupContent
                 || content instanceof ITableGroupContent)
@@ -2866,8 +2874,7 @@ public class XlsRenderer implements IAreaVisitor
                         if (content.getTOC() != null)
                         {
                             sheetName = content.getTOC().toString();
-                            // Имя заданное через TOC для группы наиболее важное
-                            stopSearch = sheetName != null;
+                            useOnlyToc = true;
                         }
                     }
                 }
@@ -2879,7 +2886,7 @@ public class XlsRenderer implements IAreaVisitor
             }
         }
 
-        if (container != null && !stopSearch)
+        if (container != null)
         {
             Iterator<IArea> children = container.getChildren();
 
