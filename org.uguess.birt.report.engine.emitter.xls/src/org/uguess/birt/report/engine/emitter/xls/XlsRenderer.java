@@ -154,14 +154,11 @@ import org.eclipse.birt.report.engine.nLayout.area.IImageArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITemplateArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.ContainerArea;
-import org.eclipse.birt.report.engine.nLayout.area.impl.ListGroupArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
-import org.eclipse.birt.report.engine.nLayout.area.impl.TextArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
 import org.eclipse.birt.report.model.core.DesignElement;
 import org.eclipse.emf.common.util.EList;
-import org.uguess.birt.report.engine.emitter.xls.XlsRenderer2.TextAreaWrapper;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AggregateFrame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AreaFrame;
@@ -241,6 +238,9 @@ public class XlsRenderer implements IAreaVisitor
     private ChartUtil.CacheDateFormat cacheDateFormat;
 
     private ArrayList<Sheet> modelSheets = new ArrayList<Sheet>();
+
+    private short rowShift;
+    private short columnShift;
 
     public void initialize(IEmitterServices services)
     {
@@ -1123,6 +1123,8 @@ public class XlsRenderer implements IAreaVisitor
 
         boolean[] nonBlankRow = new boolean[rowCount];
         boolean[] emptyColumn = new boolean[columnCount];
+        rowShift = 0;
+        columnShift = 0;
 
         if (removeEmptyRow)
         {
@@ -1141,12 +1143,17 @@ public class XlsRenderer implements IAreaVisitor
                 }
             }
 
+            for (int i = 0; i < rowCount && !nonBlankRow[i]; i++)
+            {
+                rowShift++;
+            }
+
             // check blank columns
             for (int j = 0; j < columnCount; j++)
             {
                 emptyColumn[j] = true;
 
-                for (int i = 0; i < rowCount; i++)
+                for (int i = rowShift; i < rowCount; i++)
                 {
                     Cell cell = modelSheet.getCell(i, j, false);
 
@@ -1162,26 +1169,31 @@ public class XlsRenderer implements IAreaVisitor
                     break;
                 }
             }
+
+            for (int j = 0; j < columnCount && emptyColumn[j]; j++)
+            {
+                columnShift++;
+            }
         }
 
-        for (short i = 0; i < columnCount; i++)
+        for (short i = columnShift; i < columnCount; i++)
         {
             double width = modelSheet.getColumnWidth(i)
                 / (1000 * baseCharWidth);
 
             if (!removeEmptyRow || !emptyColumn[i])
             {
-                workbook.setColWidth(i, (short) (width * 256));
+                workbook.setColWidth(i - columnShift, (short) (width * 256));
             }
             else
             {
-                workbook.setColWidth(i, 50);
+                workbook.setColWidth(i - columnShift, 50);
             }
         }
 
         RangeStyle emptyCellStyle = processor.getEmptyCellStyle(false);
 
-        for (short y = 0; y < rowCount; y++)
+        for (short y = rowShift; y < rowCount; y++)
         {
             if (!removeEmptyRow || nonBlankRow[y])
             {
@@ -1191,18 +1203,19 @@ public class XlsRenderer implements IAreaVisitor
 
                 height *= 22; // s.vladykin: magic empirical coefficient
 
-                workbook.setRowHeight(y, (int) height);
+                workbook.setRowHeight(y - rowShift, (int) height);
             }
             else
             {
-                workbook.setRowHeight(y, 0);
+                workbook.setRowHeight(y - rowShift, 0);
             }
 
-            for (short x = 0; x < columnCount; x++)
+            for (short x = columnShift; x < columnCount; x++)
             {
                 try
                 {
-                    workbook.setRangeStyle(emptyCellStyle, y, x, y, x);
+                    workbook.setRangeStyle(emptyCellStyle, y - rowShift, x
+                        - columnShift, y - rowShift, x - columnShift);
                 }
                 catch (Exception e)
                 {
@@ -1215,11 +1228,11 @@ public class XlsRenderer implements IAreaVisitor
 
         Deque<MergeBlock> merged = new LinkedList<MergeBlock>();
 
-        for (short y = 0; y < rowCount; y++)
+        for (short y = rowShift; y < rowCount; y++)
         {
             if (!removeEmptyRow || nonBlankRow[y])
             {
-                top: for (short x = 0; x < columnCount; x++)
+                top: for (short x = columnShift; x < columnCount; x++)
                 {
                     Cell element = modelSheet.getCell(y, x, false);
                     if (element != null)
@@ -1293,7 +1306,8 @@ public class XlsRenderer implements IAreaVisitor
         RangeStyle cellStyle = processor.getCellStyle(element, x, y,
             modelSheet, useHyperLinkStyle, mb);
 
-        workbook.setRangeStyle(cellStyle, y, x, y2, x2);
+        workbook.setRangeStyle(cellStyle, y - rowShift, x - columnShift, y2
+            - rowShift, x2 - columnShift);
 
         exportCellData(element, cell);
 
@@ -1411,14 +1425,15 @@ public class XlsRenderer implements IAreaVisitor
                 n = df.parse(tmp);
             }
 
-            workbook.setNumber(row, col, n.doubleValue());
+            workbook.setNumber(row - rowShift, col - columnShift,
+                n.doubleValue());
         }
         else
         {
             String str = ValueFormatter.format(val, formatSpec, ulocale,
                 oCachedJavaFormatter);
 
-            workbook.setText(row, col, str);
+            workbook.setText(row - rowShift, col - columnShift, str);
         }
     }
 
@@ -1446,8 +1461,9 @@ public class XlsRenderer implements IAreaVisitor
 
         if (name.length() > MAX_SHEET_NAME_LENGTH)
         {
-            name.setLength(MAX_SHEET_NAME_LENGTH); // Make sure that name is not too long for excel
-                                // sheet name.
+            name.setLength(MAX_SHEET_NAME_LENGTH); // Make sure that name is not
+                                                   // too long for excel
+            // sheet name.
         }
 
         return name.toString();
@@ -1510,8 +1526,8 @@ public class XlsRenderer implements IAreaVisitor
         GeneratedChartState generatedChartState, XlsCell cell) throws Exception
     {
         workbook.setSheet(cell.sheet);
-        ChartShape chart = workbook.addChart(cell.x, cell.y, cell.x2 + 1,
-            cell.y2 + 1);
+        ChartShape chart = workbook.addChart(cell.x - columnShift, cell.y
+            - rowShift, cell.x2 + 1 - columnShift, cell.y2 + 1 - rowShift);
 
         ChartFormat chartFormat = chart.getPlotFormat();
         chartFormat.setSolid();
@@ -1779,18 +1795,20 @@ public class XlsRenderer implements IAreaVisitor
                                     if (col == 0)
                                     {
                                         xFormula = getChartSeriesFormula(
-                                            sheetName, dataCoord.getY1(),
-                                            dataCoord.getX1(),
-                                            dataCoord.getY2(),
-                                            dataCoord.getX2());
+                                            sheetName, dataCoord.getY1()
+                                                - rowShift, dataCoord.getX1()
+                                                - columnShift,
+                                            dataCoord.getY2() - rowShift,
+                                            dataCoord.getX2() - columnShift);
                                     }
                                     else
                                     {
                                         yFormulas.add(getChartSeriesFormula(
-                                            sheetName, dataCoord.getY1(),
-                                            dataCoord.getX1(),
-                                            dataCoord.getY2(),
-                                            dataCoord.getX2()));
+                                            sheetName, dataCoord.getY1()
+                                                - rowShift, dataCoord.getX1()
+                                                - columnShift,
+                                            dataCoord.getY2() - rowShift,
+                                            dataCoord.getX2() - columnShift));
                                     }
                                 }
                             }
@@ -1804,8 +1822,9 @@ public class XlsRenderer implements IAreaVisitor
                     {
                         for (int i = 0; i < values.length; i++)
                         {
-                            writeChartValue(workbook, 2 + i, col, values[i],
-                                it.getDataType(), axisFormatSpec, cachedFormat);
+                            writeChartValue(workbook, 2 + i + rowShift, col
+                                + columnShift, values[i], it.getDataType(),
+                                axisFormatSpec, cachedFormat);
                         }
                     }
 
@@ -2248,7 +2267,8 @@ public class XlsRenderer implements IAreaVisitor
         }
         else if (!suppressUnknownImage)
         {
-            workbook.setText(cell.y, cell.x, "<<Unsupported Image>>"); //$NON-NLS-1$
+            workbook.setText(cell.y - rowShift, cell.x - columnShift,
+                "<<Unsupported Image>>"); //$NON-NLS-1$
         }
     }
 
@@ -2284,18 +2304,20 @@ public class XlsRenderer implements IAreaVisitor
 
             if (csNumberValue == null || csNumberValue.isNaN())
             {
-                workbook.setText(cell.sheet, cell.y, cell.x, csCellText);
+                workbook.setText(cell.sheet, cell.y - rowShift, cell.x
+                    - columnShift, csCellText);
             }
             else
             {
                 if (bigValue == null || bigValue.precision() < 20)
                 {
-                    workbook.setNumber(cell.sheet, cell.y, cell.x,
-                        csNumberValue);
+                    workbook.setNumber(cell.sheet, cell.y - rowShift, cell.x
+                        - columnShift, csNumberValue);
                 }
                 else
                 {
-                    workbook.setText(cell.sheet, cell.y, cell.x, csCellText);
+                    workbook.setText(cell.sheet, cell.y - rowShift, cell.x
+                        - columnShift, csCellText);
                 }
             }
         }
@@ -2332,8 +2354,9 @@ public class XlsRenderer implements IAreaVisitor
 
                 if (link != null)
                 {
-                    workbook.addHyperlink(cell.y, cell.x, cell.y2, cell.x2,
-                        link, HyperLink.kURLAbs, tooltip);
+                    workbook.addHyperlink(cell.y - rowShift, cell.x
+                        - columnShift, cell.y2 - rowShift, cell.x2
+                        - columnShift, link, HyperLink.kURLAbs, tooltip);
 
                     return true;
                 }
@@ -2368,7 +2391,8 @@ public class XlsRenderer implements IAreaVisitor
 
                     if (comments != null && comments.length() > 0)
                     {
-                        workbook.addComment(cell.y, cell.x, comments, null);
+                        workbook.addComment(cell.y - rowShift, cell.x
+                            - columnShift, comments, null);
 
                         return true;
                     }
@@ -2407,8 +2431,8 @@ public class XlsRenderer implements IAreaVisitor
                 }
             }
 
-            return workbook.addPicture(cell.x, cell.y, cell.x2 + 1,
-                cell.y2 + 1, data);
+            return workbook.addPicture(cell.x - columnShift, cell.y - rowShift,
+                cell.x2 + 1 - columnShift, cell.y2 + 1 - rowShift, data);
         }
 
         return null;
@@ -2663,13 +2687,16 @@ public class XlsRenderer implements IAreaVisitor
         {
             for (int col = tableCoord.getX1(); col <= tableCoord.getX2(); col++)
             {
-                if (equals(values[0], workbook.getText(sheet, row, col)))
+                if (equals(values[0],
+                    workbook.getText(sheet, row - rowShift, col - columnShift)))
                 {
                     int k = 1;
 
                     while (k < values.length
-                        && equals(values[k],
-                            workbook.getText(sheet, row + k, col)))
+                        && equals(
+                            values[k],
+                            workbook.getText(sheet, row + k - rowShift, col
+                                - columnShift)))
                     {
                         k++;
                     }
@@ -2805,8 +2832,8 @@ public class XlsRenderer implements IAreaVisitor
     {
         String oldValue = workbook.getText(0, 0);
 
-        writeChartValue(workbook, 0, 0, val, valType, formatSpec,
-            oCachedJavaFormatter);
+        writeChartValue(workbook, 0 + rowShift, 0 + columnShift, val, valType,
+            formatSpec, oCachedJavaFormatter);
 
         String result = workbook.getText(0, 0);
         workbook.setText(0, 0, oldValue);
