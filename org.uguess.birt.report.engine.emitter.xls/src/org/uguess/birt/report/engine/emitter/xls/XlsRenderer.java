@@ -198,6 +198,7 @@ public class XlsRenderer implements IAreaVisitor
     private static final boolean DEBUG;
 
     private static final String DATA_BINDING_REF = "dataBindingRef";
+    private static final int MAX_DECIMAL_LENGTH = 3;
 
     static
     {
@@ -1427,6 +1428,12 @@ public class XlsRenderer implements IAreaVisitor
 
             workbook.setNumber(row - rowShift, col - columnShift,
                 n.doubleValue());
+
+            RangeStyle rangeStyle = workbook.getRangeStyle(row - rowShift, col
+                - columnShift, row - rowShift, col - columnShift);
+            rangeStyle.setCustomFormat(getNumberFormat(n.doubleValue()));
+            workbook.setRangeStyle(rangeStyle, row - rowShift, col
+                - columnShift, row - rowShift, col - columnShift);
         }
         else
         {
@@ -2313,6 +2320,14 @@ public class XlsRenderer implements IAreaVisitor
                 {
                     workbook.setNumber(cell.sheet, cell.y - rowShift, cell.x
                         - columnShift, csNumberValue);
+
+                    RangeStyle rangeStyle = workbook.getRangeStyle(cell.y
+                        - rowShift, cell.x - columnShift, cell.y - rowShift,
+                        cell.x - columnShift);
+                    rangeStyle.setCustomFormat(getNumberFormat(csNumberValue));
+                    workbook.setRangeStyle(rangeStyle, cell.y - rowShift,
+                        cell.x - columnShift, cell.y - rowShift, cell.x
+                            - columnShift);
                 }
                 else
                 {
@@ -2926,6 +2941,41 @@ public class XlsRenderer implements IAreaVisitor
                     findSheetNames((IContainerArea) area, sheetNames);
                 }
             }
+        }
+    }
+
+    private String getNumberFormat(double d)
+    {
+        StringBuilder buffer = new StringBuilder("#,##0");
+
+        int decimalLength = getDecimalLength(d);
+
+        for (int i = 0; i < Math.min(decimalLength, MAX_DECIMAL_LENGTH); i++)
+        {
+            if (i == 0)
+            {
+                buffer.append(".0");
+            }
+            else
+            {
+                buffer.append("#");
+            }
+        }
+
+        return buffer.toString();
+    }
+
+    private int getDecimalLength(double d)
+    {
+        String decimal = String.valueOf(d).split("\\.")[1];
+
+        if ("0".equals(decimal))
+        {
+            return 0;
+        }
+        else
+        {
+            return decimal.length();
         }
     }
 }
