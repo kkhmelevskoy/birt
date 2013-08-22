@@ -2286,6 +2286,12 @@ public class XlsRenderer implements IAreaVisitor
 
     protected void exportText(String csCellText, XlsCell cell) throws Exception
     {
+        exportText(csCellText, cell, false);
+    }
+
+    protected void exportText(String csCellText, XlsCell cell, boolean isPercent)
+        throws Exception
+    {
         if (csCellText != null && !csCellText.isEmpty())
         {
             Double csNumberValue;
@@ -2309,25 +2315,28 @@ public class XlsRenderer implements IAreaVisitor
                 bigValue = null;
             }
 
-            if (csNumberValue == null || csNumberValue.isNaN())
+            if (csNumberValue != null && !csNumberValue.isNaN()
+                && (bigValue == null || bigValue.precision() < 20))
             {
-                workbook.setText(cell.sheet, cell.y - rowShift, cell.x
-                    - columnShift, csCellText);
+                workbook.setNumber(cell.sheet, cell.y - rowShift, cell.x
+                    - columnShift, csNumberValue.doubleValue()
+                    / (isPercent ? 100 : 1));
+
+                RangeStyle rangeStyle = workbook.getRangeStyle(cell.y
+                    - rowShift, cell.x - columnShift, cell.y - rowShift, cell.x
+                    - columnShift);
+                rangeStyle.setCustomFormat(getNumberFormat(csNumberValue)
+                    + (isPercent ? "%" : ""));
+                workbook.setRangeStyle(rangeStyle, cell.y - rowShift, cell.x
+                    - columnShift, cell.y - rowShift, cell.x - columnShift);
             }
             else
             {
-                if (bigValue == null || bigValue.precision() < 20)
+                if (isPercent(csCellText))
                 {
-                    workbook.setNumber(cell.sheet, cell.y - rowShift, cell.x
-                        - columnShift, csNumberValue);
-
-                    RangeStyle rangeStyle = workbook.getRangeStyle(cell.y
-                        - rowShift, cell.x - columnShift, cell.y - rowShift,
-                        cell.x - columnShift);
-                    rangeStyle.setCustomFormat(getNumberFormat(csNumberValue));
-                    workbook.setRangeStyle(rangeStyle, cell.y - rowShift,
-                        cell.x - columnShift, cell.y - rowShift, cell.x
-                            - columnShift);
+                    String trimValue = csCellText.trim();
+                    exportText(trimValue.substring(0, trimValue.length() - 1),
+                        cell, true);
                 }
                 else
                 {
@@ -2858,10 +2867,6 @@ public class XlsRenderer implements IAreaVisitor
 
     private boolean isGridVisible(Grid grid)
     {
-        System.out.println("XlsRenderer.isGridVisible()");
-        System.out.println(grid.getLineAttributes().isSetVisible()
-            && grid.getLineAttributes().isVisible());
-
         return grid.getLineAttributes().isSetVisible()
             && grid.getLineAttributes().isVisible();
     }
@@ -2977,5 +2982,37 @@ public class XlsRenderer implements IAreaVisitor
         {
             return decimal.length();
         }
+    }
+
+    private static boolean isPercent(String value)
+    {
+        if (value != null && !value.trim().equals(""))
+        {
+            String trimValue = value.trim();
+            int index = trimValue.indexOf('%');
+
+            if (index == trimValue.length() - 1)
+            {
+                return convert2Double(trimValue.substring(0, index)) != null;
+            }
+        }
+
+        return false;
+    }
+
+    private static Double convert2Double(String value)
+    {
+        Double csNumberValue = null;
+
+        try
+        {
+            csNumberValue = Double.parseDouble(value.replace(',', '.'));
+        }
+        catch (NumberFormatException e)
+        {
+            csNumberValue = null;
+        }
+
+        return csNumberValue;
     }
 }

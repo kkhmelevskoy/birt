@@ -247,10 +247,10 @@ public class Transformer
         if (area instanceof TableArea)
         {
             TableArea tableArea = (TableArea) area;
-            System.out.println(tableArea.isCanShrink());
-            System.out.println(tableArea.isGridDesign());
-            System.out.println(tableArea.isIgnoreReordering());
-            System.out.println(tableArea.isInlineStacking());
+//            System.out.println(tableArea.isCanShrink());
+//            System.out.println(tableArea.isGridDesign());
+//            System.out.println(tableArea.isIgnoreReordering());
+//            System.out.println(tableArea.isInlineStacking());
         }
         if (!(area instanceof CellArea))
         {
