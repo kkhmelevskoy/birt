@@ -58,7 +58,7 @@
 			</fileset>
 		</copy>
 
-		<jar destfile="${project.dir}/${project.identifier}.jar">
+		<jar manifest="${project.dir}/META-INF/MANIFEST.MF" destfile="${project.dir}/${project.identifier}.jar">
 			<fileset dir="${project.dir}/build">
 				<include name="**/*.*" />
 			</fileset>
