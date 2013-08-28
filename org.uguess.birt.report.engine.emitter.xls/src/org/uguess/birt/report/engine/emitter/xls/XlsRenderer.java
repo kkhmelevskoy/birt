@@ -192,6 +192,7 @@ public class XlsRenderer implements IAreaVisitor
     private static final int MAX_SHEET_NAME_LENGTH = 31;
     public static final String DEFAULT_FILE_NAME = "report.xls"; //$NON-NLS-1$
     protected static final String XLS_IDENTIFIER = "xls"; //$NON-NLS-1$
+    protected static final String XLSX_IDENTIFIER = "xlsx"; //$NON-NLS-1$
     protected static final int COMMENTS_WIDTH_IN_COLUMN = 3;
     protected static final int COMMENTS_HEIGHT_IN_ROW = 5;
     private static final String ATTR_LANDSCAPE = "landscape"; //$NON-NLS-1$
@@ -242,6 +243,12 @@ public class XlsRenderer implements IAreaVisitor
 
     private short rowShift;
     private short columnShift;
+    private String format;
+
+    public XlsRenderer(String format)
+    {
+        this.format = format;
+    }
 
     public void initialize(IEmitterServices services)
     {
@@ -261,7 +268,7 @@ public class XlsRenderer implements IAreaVisitor
         this.services = services;
 
         // parse emitter options.
-        Object option = services.getEmitterConfig().get(XLS_IDENTIFIER);
+        Object option = services.getEmitterConfig().get(format);
         if (option instanceof Map)
         {
             parseRendererOptions((Map) option);
@@ -767,8 +774,14 @@ public class XlsRenderer implements IAreaVisitor
         {
             workbook.setSheet(0); // activate first sheet in report
 
-            workbook.write(output);
-            // workbook.writeXLSX(output);
+            if (XLSX_IDENTIFIER.equals(format))
+            {
+                workbook.writeXLSX(output);
+            }
+            else
+            {
+                workbook.write(output);
+            }
 
             if (closeStream)
             {
@@ -1656,6 +1669,11 @@ public class XlsRenderer implements IAreaVisitor
                 // chart.setMinorGridVisible(xyAxis, yAxises,
                 // isGridVisible(axis.getMinorGrid()));
 
+                // if (xyAxis == ChartShape.XAxis)
+                // {
+                // chart.setAxisScaleLabelUnit(xyAxis, 0, 0);
+                // }
+
                 axisFormat = chart.getAxisFormat(xyAxis, yAxises);
                 applyTextFormat(c, axisFormat);
 
@@ -1863,7 +1881,9 @@ public class XlsRenderer implements IAreaVisitor
                 if (axisTitle != null && axisTitle.length() != 0
                     && !"X-Axis Title".equals(axisTitle)
                     && !"Y-Axis Title".equals(axisTitle))
+                {
                     workbook.setText(0, beginCol, axisTitle);
+                }
             }
         }
 

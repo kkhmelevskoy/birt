@@ -16,94 +16,17 @@
 package org.uguess.birt.report.engine.emitter.xls;
 
 
-import java.util.Map;
-
-import org.eclipse.birt.report.engine.api.IRenderOption;
-import org.eclipse.birt.report.engine.content.IAutoTextContent;
-import org.eclipse.birt.report.engine.content.IContent;
-import org.eclipse.birt.report.engine.content.IPageContent;
-import org.eclipse.birt.report.engine.content.IReportContent;
-import org.eclipse.birt.report.engine.emitter.ContentEmitterAdapter;
-import org.eclipse.birt.report.engine.emitter.IEmitterServices;
-import org.eclipse.birt.report.engine.nLayout.area.IArea;
-import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
-import org.uguess.birt.report.engine.util.ContentLookupBuilder;
-import org.uguess.birt.report.engine.util.OptionParser;
-
-
 /**
  * XlsEmitter
  * 
  * @preserve
  */
-public class XlsEmitter extends ContentEmitterAdapter
+public class XlsEmitter extends ExcelEmitter
 {
-
-    private XlsRenderer renderer;
-    private ContentLookupBuilder builder;
-    private boolean singlePageMode = false;;
-
-    /*
-     * (non-Javadoc)
-     * @see
-     * org.eclipse.birt.report.engine.emitter.ContentEmitterAdapter#initialize
-     * (org.eclipse.birt.report.engine.emitter.IEmitterServices)
-     */
-    public void initialize(IEmitterServices service)
+    public XlsEmitter()
     {
-        Object legacyOption = null;
-        Object singleOption = null;
-
-        Object emitterOption = service.getEmitterConfig().get(
-            XlsRenderer.XLS_IDENTIFIER);
-        if (emitterOption instanceof Map)
-        {
-            legacyOption = ((Map) emitterOption)
-                .get(XlsEmitterConfig.KEY_LEGACY_MODE);
-            singleOption = ((Map) emitterOption)
-                .get(XlsEmitterConfig.KEY_EXPORT_SINGLE_SHEET);
-        }
-
-        IRenderOption renderOption = service.getRenderOption();
-        if (renderOption != null)
-        {
-            Object value = renderOption
-                .getOption(XlsEmitterConfig.KEY_LEGACY_MODE);
-
-            if (value != null)
-            {
-                legacyOption = value;
-            }
-
-            value = renderOption
-                .getOption(XlsEmitterConfig.KEY_EXPORT_SINGLE_SHEET);
-
-            if (value != null)
-            {
-                singleOption = value;
-            }
-        }
-
-        singlePageMode = singleOption != null
-            && OptionParser.parseBoolean(singleOption);
-
-        boolean legacyMode = legacyOption != null
-            && OptionParser.parseBoolean(legacyOption);
-
-        if (legacyMode)
-        {
-            renderer = new XlsRenderer();
-        }
-        else
-        {
-            renderer = new XlsRenderer2();
-        }
-
-        renderer.initialize(service);
-
-        builder = new ContentLookupBuilder();
+        super();
     }
-
     /*
      * (non-Javadoc)
      * @see
@@ -115,66 +38,16 @@ public class XlsEmitter extends ContentEmitterAdapter
         return XlsRenderer.XLS_IDENTIFIER;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see
-     * org.eclipse.birt.report.engine.emitter.ContentEmitterAdapter#start(org
-     * .eclipse.birt.report.engine.content.IReportContent)
-     */
-    public void start(IReportContent report)
+    @Override
+    protected XlsRenderer createRenderer(boolean legacyMode)
     {
-        renderer.start(report);
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see
-     * org.eclipse.birt.report.engine.emitter.ContentEmitterAdapter#end(org.
-     * eclipse.birt.report.engine.content.IReportContent)
-     */
-    public void end(IReportContent report)
-    {
-        renderer.end(report);
-
-        builder.reset();
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see
-     * org.eclipse.birt.report.engine.emitter.ContentEmitterAdapter#startPage
-     * (org.eclipse.birt.report.engine.content.IPageContent)
-     */
-    public void startPage(IPageContent page)
-    {
-        IArea pageArea = (IArea) page.getExtension(IContent.LAYOUT_EXTENSION);
-        if (pageArea != null)
+        if (legacyMode)
         {
-            // reset the cache for multi-page mode
-            if (!singlePageMode)
-            {
-                builder.reset();
-            }
-
-            pageArea.accept(builder);
-
-            renderer.contentCache = builder.getMapping();
-
-            pageArea.accept(renderer);
+            return new XlsRenderer(XlsRenderer.XLS_IDENTIFIER);
         }
-
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see
-     * org.eclipse.birt.report.engine.emitter.ContentEmitterAdapter#startAutoText
-     * (org.eclipse.birt.report.engine.content.IAutoTextContent)
-     */
-    public void startAutoText(IAutoTextContent autoText)
-    {
-        ITextArea totalPage = (ITextArea) autoText
-            .getExtension(IContent.LAYOUT_EXTENSION);
-        renderer.setTotalPage(totalPage);
+        else
+        {
+            return new XlsRenderer2(XlsRenderer.XLS_IDENTIFIER);
+        }
     }
 }

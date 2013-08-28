@@ -53,6 +53,11 @@ public class XlsRenderer2 extends XlsRenderer
     private Stack<IArea> areaStack;
     private Stack<IArea> clipStack;
     private IArea bodyArea;
+    
+    public XlsRenderer2(String format)
+    {
+        super(format);
+    }
 
     @Override
     public void start(IReportContent rc)

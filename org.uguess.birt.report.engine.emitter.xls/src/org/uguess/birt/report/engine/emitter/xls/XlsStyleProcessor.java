@@ -35,6 +35,7 @@ import com.smartxls.WorkBook;
 public class XlsStyleProcessor
 {
 
+    private static final int MIN_FONT_SIZE = 20;
     private static final int INDEX_FONT = 0;
     private static final int INDEX_BACKGROUND = 1;
     private static final int INDEX_BORDER_LEFT = 2;
@@ -102,7 +103,7 @@ public class XlsStyleProcessor
         emptyCellStyle.setVerticalAlignment(RangeStyle.VerticalAlignmentCenter);
 
         emptyCellStyle.setFontName("Serif"); //$NON-NLS-1$
-        short size = 10;
+        short size = MIN_FONT_SIZE;
         emptyCellStyle.setFontSize(size);
 
         if (merged)
@@ -303,7 +304,7 @@ public class XlsStyleProcessor
 
         String fontName = style.getFontFamily() == null ? "Serif" //$NON-NLS-1$
             : style.getFontFamily();
-        int fontSize = style.getFontSize() == 0 ? 10 : style.getFontSize() / 50; // s.vladykin:
+        int fontSize = style.getFontSize() == 0 ? MIN_FONT_SIZE : style.getFontSize() / 50; // s.vladykin:
                                                                                  // magic
                                                                                  // font
                                                                                  // scale
@@ -321,7 +322,7 @@ public class XlsStyleProcessor
 
         cellStyle.setFontName(fontName);
         cellStyle.setFontColor(forecolor.getRGB());
-        cellStyle.setFontSize(fontSize);
+        cellStyle.setFontSize(Math.max(MIN_FONT_SIZE, fontSize));
         cellStyle.setFontUnderline(underline);
         cellStyle.setFontStrikeout(strikeout);
         cellStyle.setFontBold(boldweight);
