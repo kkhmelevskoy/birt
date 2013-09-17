@@ -1188,6 +1188,15 @@ public class XlsRenderer implements IAreaVisitor
             {
                 columnShift++;
             }
+
+            for (int y = rowCount - 1; y >= rowShift; y--)
+            {
+                if (nonBlankRow[y])
+                {
+                    rowCount = y + 1;
+                    break;
+                }
+            }
         }
 
         for (short i = columnShift; i < columnCount; i++)
@@ -1212,8 +1221,6 @@ public class XlsRenderer implements IAreaVisitor
             if (!removeEmptyRow || nonBlankRow[y])
             {
                 double height = modelSheet.getRowHeight(y) / 1000d;// + 2;
-
-                // System.out.println( "row height " + y + ": " + height );
 
                 height *= 22; // s.vladykin: magic empirical coefficient
 
