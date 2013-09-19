@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -233,9 +234,9 @@ public class XlsRenderer implements IAreaVisitor
     private long timeCounter;
     Map<IArea, IContent> contentCache;
 
-    private int chartCount = 0;
     private List<XlsCell> chartCells = new ArrayList<XlsCell>();
     private List<GeneratedChartState> chartStates = new ArrayList<GeneratedChartState>();
+    private HashMap<Integer, Integer> doneCharts = new HashMap<Integer, Integer>();
 
     private ChartUtil.CacheDateFormat cacheDateFormat;
 
@@ -669,7 +670,9 @@ public class XlsRenderer implements IAreaVisitor
     public void start(IReportContent rc)
     {
         chartCells.clear();
+        chartStates.clear();
         modelSheets.clear();
+        doneCharts.clear();
 
         if (DEBUG)
         {
@@ -754,18 +757,44 @@ public class XlsRenderer implements IAreaVisitor
             }
         }
 
-        if (chartCount > 0)
+        for (int i = 0; i < chartCells.size(); i++)
         {
-            for (int i = 0; i < chartCount; i++)
+            XlsCell cell = chartCells.get(i);
+
+            try
+            {
+                exportChart(i, chartStates.get(i), cell);
+            }
+            catch (Exception e)
             {
                 try
                 {
-                    exportChart(i, chartStates.get(i), chartCells.get(i));
+                    Integer cellSheet = Integer.valueOf(cell.sheet);
+                    doneCharts.put(cellSheet, Integer.valueOf(doneCharts.get(
+                        cellSheet).intValue() - 1));
+                    workbook.removeChart(doneCharts.get(cellSheet).intValue());
                 }
-                catch (Exception e)
+                catch (Exception e2)
                 {
-                    System.err.println(i);
-                    e.printStackTrace();
+                    e2.printStackTrace();
+                }
+                
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                e.printStackTrace(new PrintStream(stream));
+
+                exportText(stream.toString(), cell);
+
+                try
+                {
+                    RangeStyle style = workbook.getRangeStyle();
+                    style.setFontSize(20 * 8);
+                    workbook.setRangeStyle(style, cell.y - rowShift, cell.x
+                        - columnShift, cell.y2 + 1 - rowShift, cell.x2 + 1
+                        - columnShift);
+                }
+                catch (Exception e1)
+                {
+                    e1.printStackTrace();
                 }
             }
         }
@@ -1364,7 +1393,6 @@ public class XlsRenderer implements IAreaVisitor
                 // страниц, поскольку при экспорте
                 // вставляются страницы с
                 // данными графиков
-                chartCount++;
                 chartCells.add(cell);
                 chartStates.add((GeneratedChartState) generatedChartState);
 
@@ -1556,6 +1584,18 @@ public class XlsRenderer implements IAreaVisitor
         ChartShape chart = workbook.addChart(cell.x - columnShift, cell.y
             - rowShift, cell.x2 + 1 - columnShift, cell.y2 + 1 - rowShift);
 
+        Integer cellSheet = Integer.valueOf(cell.sheet);
+
+        if (doneCharts.containsKey(cellSheet))
+        {
+            doneCharts.put(cellSheet,
+                Integer.valueOf(doneCharts.get(cellSheet).intValue() + 1));
+        }
+        else
+        {
+            doneCharts.put(cellSheet, Integer.valueOf(1));
+        }
+
         ChartFormat chartFormat = chart.getPlotFormat();
         chartFormat.setSolid();
         chartFormat.setForeColor(Color.WHITE.getRGB());
@@ -1566,6 +1606,7 @@ public class XlsRenderer implements IAreaVisitor
         String chartSubType = chartModel.getSubType();
 
         short type;
+        short chType = ChartShape.Combination;
         boolean stacked = "Stacked".equals(chartSubType);
 
         if ("Line Chart".equals(chartType))
@@ -1583,11 +1624,14 @@ public class XlsRenderer implements IAreaVisitor
         else if ("Scatter Chart".equals(chartType))
         {
             type = ChartShape.Scatter;
+            chType = type;
         }
         else
         {
             throw new IllegalStateException(chartType + " is not supported.");
         }
+
+        chart.setChartType(chType);
 
         ChartWithAxes chartWithAxes = (ChartWithAxes) chartModel;
         String chartTitle = null;
@@ -1712,9 +1756,17 @@ public class XlsRenderer implements IAreaVisitor
 
                         if (numberDataElement.isSetValue())
                         {
-                            chart.setAutoMinimumScale(xyAxis, yAxises, false);
-                            min = numberDataElement.getValue();
-                            isMinSet = true;
+                            try
+                            {
+                                chart.setAutoMinimumScale(xyAxis, yAxises,
+                                    false);
+                                min = numberDataElement.getValue();
+                                isMinSet = true;
+                            }
+                            catch (Exception e)
+                            {
+                                // e.printStackTrace();
+                            }
                         }
                     }
 
@@ -1725,9 +1777,17 @@ public class XlsRenderer implements IAreaVisitor
 
                         if (numberDataElement.isSetValue())
                         {
-                            chart.setAutoMaximumScale(xyAxis, yAxises, false);
-                            max = numberDataElement.getValue();
-                            isMaxSet = true;
+                            try
+                            {
+                                chart.setAutoMaximumScale(xyAxis, yAxises,
+                                    false);
+                                max = numberDataElement.getValue();
+                                isMaxSet = true;
+                            }
+                            catch (Exception e)
+                            {
+                                // e.printStackTrace();
+                            }
                         }
                     }
 
@@ -1902,8 +1962,6 @@ public class XlsRenderer implements IAreaVisitor
             }
         }
 
-        chart.setChartType(ChartShape.Combination);
-
         if (isChartNeedExtraDataSheet)
         {
             xFormula = getChartSeriesFormula(sheetName, 2, 0, 1 + seriesLen, 0);
@@ -1928,7 +1986,9 @@ public class XlsRenderer implements IAreaVisitor
             chart.addSeries();
 
             if (type == ChartShape.Scatter || type == ChartShape.Bubble)
+            {
                 chart.setSeriesXValueFormula(series, xFormula);
+            }
             chart.setSeriesYValueFormula(series, yFormula);
 
             chart.setSeriesYAxisIndex(series, seriesYAxises.get(series) - 1);
@@ -1937,7 +1997,10 @@ public class XlsRenderer implements IAreaVisitor
             Series ySeries = ySerieses.get(series);
             SeriesDefinition ySeriesDefinition = ySeriesDefinitions.get(series);
 
-            chart.setSeriesType(series, seriesType(ySeries));
+            if (type != ChartShape.Scatter)
+            {
+                chart.setSeriesType(series, seriesType(ySeries));
+            }
 
             try
             {
@@ -2025,7 +2088,9 @@ public class XlsRenderer implements IAreaVisitor
 
         if (chart.getChartType() != ChartShape.Scatter
             && chart.getChartType() != ChartShape.Bubble)
+        {
             chart.setCategoryFormula(xFormula);
+        }
 
         if (stacked)
         {
@@ -2306,70 +2371,89 @@ public class XlsRenderer implements IAreaVisitor
         }
     }
 
-    protected void exportText(ITextArea text, XlsCell cell) throws Exception
+    protected void exportText(ITextArea text, XlsCell cell)
     {
         exportText(text.getText(), cell);
     }
 
-    protected void exportText(String csCellText, XlsCell cell) throws Exception
+    protected void exportText(String csCellText, XlsCell cell)
     {
         exportText(csCellText, cell, false);
     }
 
     protected void exportText(String csCellText, XlsCell cell, boolean isPercent)
-        throws Exception
     {
-        if (csCellText != null && !csCellText.isEmpty())
+        try
         {
-            Double csNumberValue;
-            try
+            if (csCellText != null && !csCellText.isEmpty())
             {
-                csNumberValue = Double
-                    .parseDouble(csCellText.replace(',', '.'));
-            }
-            catch (NumberFormatException e)
-            {
-                csNumberValue = null;
-            }
-
-            BigDecimal bigValue = null;
-            try
-            {
-                bigValue = new BigDecimal(csCellText.replace(',', '.'));
-            }
-            catch (NumberFormatException e)
-            {
-                bigValue = null;
-            }
-
-            if (csNumberValue != null && !csNumberValue.isNaN()
-                && (bigValue == null || bigValue.precision() < 20))
-            {
-                workbook.setNumber(cell.sheet, cell.y - rowShift, cell.x
-                    - columnShift, csNumberValue.doubleValue()
-                    / (isPercent ? 100 : 1));
-
-                RangeStyle rangeStyle = workbook.getRangeStyle(cell.y
-                    - rowShift, cell.x - columnShift, cell.y - rowShift, cell.x
-                    - columnShift);
-                rangeStyle.setCustomFormat(getNumberFormat(csNumberValue)
-                    + (isPercent ? "%" : ""));
-                workbook.setRangeStyle(rangeStyle, cell.y - rowShift, cell.x
-                    - columnShift, cell.y - rowShift, cell.x - columnShift);
-            }
-            else
-            {
-                if (isPercent(csCellText))
+                Double csNumberValue;
+                try
                 {
-                    String trimValue = csCellText.trim();
-                    exportText(trimValue.substring(0, trimValue.length() - 1),
-                        cell, true);
+                    csNumberValue = Double.parseDouble(csCellText.replace(',',
+                        '.'));
+                }
+                catch (NumberFormatException e)
+                {
+                    csNumberValue = null;
+                }
+
+                BigDecimal bigValue = null;
+                try
+                {
+                    bigValue = new BigDecimal(csCellText.replace(',', '.'));
+                }
+                catch (NumberFormatException e)
+                {
+                    bigValue = null;
+                }
+
+                if (csNumberValue != null && !csNumberValue.isNaN()
+                    && (bigValue == null || bigValue.precision() < 20))
+                {
+                    workbook.setNumber(cell.sheet, cell.y - rowShift, cell.x
+                        - columnShift, csNumberValue.doubleValue()
+                        / (isPercent ? 100 : 1));
+
+                    RangeStyle rangeStyle = workbook.getRangeStyle(cell.y
+                        - rowShift, cell.x - columnShift, cell.y - rowShift,
+                        cell.x - columnShift);
+                    rangeStyle.setCustomFormat(getNumberFormat(csNumberValue)
+                        + (isPercent ? "%" : ""));
+                    workbook.setRangeStyle(rangeStyle, cell.y - rowShift,
+                        cell.x - columnShift, cell.y - rowShift, cell.x
+                            - columnShift);
                 }
                 else
                 {
-                    workbook.setText(cell.sheet, cell.y - rowShift, cell.x
-                        - columnShift, csCellText);
+                    if (isPercent(csCellText))
+                    {
+                        String trimValue = csCellText.trim();
+                        exportText(
+                            trimValue.substring(0, trimValue.length() - 1),
+                            cell, true);
+                    }
+                    else
+                    {
+                        workbook.setText(cell.sheet, cell.y - rowShift, cell.x
+                            - columnShift, csCellText);
+                    }
                 }
+            }
+        }
+        catch (Exception e)
+        {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            e.printStackTrace(new PrintStream(stream));
+
+            try
+            {
+                workbook.setText(cell.sheet, cell.y - rowShift, cell.x
+                    - columnShift, stream.toString());
+            }
+            catch (Exception e1)
+            {
+                e1.printStackTrace();
             }
         }
     }
@@ -2591,16 +2675,7 @@ public class XlsRenderer implements IAreaVisitor
 
             for (Iterator<XlsCell> itr = totalCells.iterator(); itr.hasNext();)
             {
-                XlsCell cell = itr.next();
-
-                try
-                {
-                    exportText(text, cell);
-                }
-                catch (Exception e)
-                {
-                    throw new RuntimeException(e);
-                }
+                exportText(text, itr.next());
             }
         }
     }
