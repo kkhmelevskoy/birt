@@ -1296,7 +1296,7 @@ public class XlsRenderer implements IAreaVisitor
                         }
 
                         MergeBlock mb = exportCell(element, x, y, modelSheet,
-                            sheetNum);
+                            sheetNum, ((y + 1) == rowCount));
 
                         if (mb != null)
                         {
@@ -1309,7 +1309,7 @@ public class XlsRenderer implements IAreaVisitor
     }
 
     protected MergeBlock exportCell(Cell element, short x, short y,
-        Sheet modelSheet, int sheet) throws Exception
+        Sheet modelSheet, int sheet, boolean isLastRow) throws Exception
     {
         if (element.isEmpty())
         {
@@ -1321,7 +1321,7 @@ public class XlsRenderer implements IAreaVisitor
 
         MergeBlock mb = null;
 
-        if (element.isMerged())
+        if (!isLastRow && element.isMerged())
         {
             Iterator<MergeBlock> it = modelSheet.mergesIterator();
             while (it.hasNext())
