@@ -1513,6 +1513,10 @@ public class XlsRenderer implements IAreaVisitor
 
             name.append(title);
         }
+        else
+        {
+            name.append(chartIndex);
+        }
 
         if (name.length() > MAX_SHEET_NAME_LENGTH)
         {
