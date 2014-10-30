@@ -154,14 +154,11 @@ import org.eclipse.birt.report.engine.nLayout.area.IImageArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITemplateArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.ContainerArea;
-import org.eclipse.birt.report.engine.nLayout.area.impl.ListGroupArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
-import org.eclipse.birt.report.engine.nLayout.area.impl.TextArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
 import org.eclipse.birt.report.model.core.DesignElement;
 import org.eclipse.emf.common.util.EList;
-import org.uguess.birt.report.engine.emitter.xls.XlsRenderer2.TextAreaWrapper;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AggregateFrame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AreaFrame;
@@ -1446,8 +1443,8 @@ public class XlsRenderer implements IAreaVisitor
 
         if (name.length() > MAX_SHEET_NAME_LENGTH)
         {
-            name.setLength(MAX_SHEET_NAME_LENGTH); // Make sure that name is not too long for excel
-                                // sheet name.
+            // Make sure that name is not too long for excel sheet name.
+            name.setLength(MAX_SHEET_NAME_LENGTH);
         }
 
         return name.toString();
@@ -1506,6 +1503,22 @@ public class XlsRenderer implements IAreaVisitor
         format.setTextRotation((int) c.getFont().getRotation());
     }
 
+    private static String externalizedMessage(
+        GeneratedChartState generatedChartState, String sChartKey)
+    {
+        try
+        {
+            return generatedChartState.getRunTimeContext().externalizedMessage(
+                sChartKey);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+
+            return sChartKey;
+        }
+    }
+
     private void exportChart(int chartIndex,
         GeneratedChartState generatedChartState, XlsCell cell) throws Exception
     {
@@ -1560,6 +1573,7 @@ public class XlsRenderer implements IAreaVisitor
             chart.setTitleFormat(format);
 
             chartTitle = c.getValue();
+            chartTitle = externalizedMessage(generatedChartState, chartTitle);
 
             chart.setTitle(chartTitle);
         }
@@ -1614,6 +1628,7 @@ public class XlsRenderer implements IAreaVisitor
         {
             Text c = axis.getTitle().getCaption();
             String axisTitle = c.getValue();
+            axisTitle = externalizedMessage(generatedChartState, axisTitle);
 
             short xyAxis = col == 0 ? ChartShape.XAxis : ChartShape.YAxis;
 
@@ -1725,6 +1740,8 @@ public class XlsRenderer implements IAreaVisitor
                 {
                     String seriesTitle = series.getSeriesIdentifier()
                         .toString();
+                    seriesTitle = externalizedMessage(generatedChartState,
+                        seriesTitle);
 
                     if (isChartNeedExtraDataSheet)
                     {
