@@ -1520,9 +1520,8 @@ public class XlsRenderer implements IAreaVisitor
 
         if (name.length() > MAX_SHEET_NAME_LENGTH)
         {
-            name.setLength(MAX_SHEET_NAME_LENGTH); // Make sure that name is not
-                                                   // too long for excel
-            // sheet name.
+            // Make sure that name is not too long for excel sheet name.
+            name.setLength(MAX_SHEET_NAME_LENGTH);
         }
 
         return name.toString();
@@ -1579,6 +1578,22 @@ public class XlsRenderer implements IAreaVisitor
                 : c.getFont().getName());
         format.setFontSizeInPoints(c.getFont().getSize());
         format.setTextRotation((int) c.getFont().getRotation());
+    }
+
+    private static String externalizedMessage(
+        GeneratedChartState generatedChartState, String sChartKey)
+    {
+        try
+        {
+            return generatedChartState.getRunTimeContext().externalizedMessage(
+                sChartKey);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+
+            return sChartKey;
+        }
     }
 
     private void exportChart(int chartIndex,
@@ -1651,6 +1666,7 @@ public class XlsRenderer implements IAreaVisitor
             chart.setTitleFormat(format);
 
             chartTitle = c.getValue();
+            chartTitle = externalizedMessage(generatedChartState, chartTitle);
 
             chart.setTitle(chartTitle);
         }
@@ -1705,6 +1721,7 @@ public class XlsRenderer implements IAreaVisitor
         {
             Text c = axis.getTitle().getCaption();
             String axisTitle = c.getValue();
+            axisTitle = externalizedMessage(generatedChartState, axisTitle);
 
             short xyAxis = col == 0 ? ChartShape.XAxis : ChartShape.YAxis;
 
@@ -1837,6 +1854,8 @@ public class XlsRenderer implements IAreaVisitor
                 {
                     String seriesTitle = series.getSeriesIdentifier()
                         .toString();
+                    seriesTitle = externalizedMessage(generatedChartState,
+                        seriesTitle);
 
                     if (isChartNeedExtraDataSheet)
                     {
