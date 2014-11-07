@@ -2110,7 +2110,8 @@ public class XlsRenderer implements IAreaVisitor
         }
 
         if (chart.getChartType() != ChartShape.Scatter
-            && chart.getChartType() != ChartShape.Bubble)
+            && chart.getChartType() != ChartShape.Bubble
+            && xFormula != null)
         {
             chart.setCategoryFormula(xFormula);
         }
