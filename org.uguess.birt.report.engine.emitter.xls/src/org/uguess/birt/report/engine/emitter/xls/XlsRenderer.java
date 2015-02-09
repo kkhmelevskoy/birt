@@ -146,6 +146,7 @@ import org.eclipse.birt.report.engine.content.ITableGroupContent;
 import org.eclipse.birt.report.engine.content.impl.PageContent;
 import org.eclipse.birt.report.engine.content.impl.ReportContent;
 import org.eclipse.birt.report.engine.emitter.IEmitterServices;
+import org.eclipse.birt.report.engine.ir.DimensionType;
 import org.eclipse.birt.report.engine.ir.GroupDesign;
 import org.eclipse.birt.report.engine.ir.ReportElementDesign;
 import org.eclipse.birt.report.engine.nLayout.area.IArea;
@@ -197,6 +198,7 @@ public class XlsRenderer implements IAreaVisitor
     protected static final int COMMENTS_WIDTH_IN_COLUMN = 3;
     protected static final int COMMENTS_HEIGHT_IN_ROW = 5;
     private static final String ATTR_LANDSCAPE = "landscape"; //$NON-NLS-1$
+    private static final String ATTR_PAGE_CONTENT = "pageContent";
     private static final boolean DEBUG;
 
     private static final String DATA_BINDING_REF = "dataBindingRef";
@@ -747,7 +749,8 @@ public class XlsRenderer implements IAreaVisitor
             Sheet modelSheet = Transformer.toSheet(singleContainer, 1000,
                 fixedColumnWidth * 1000);
             exportSheet(modelSheet,
-                Boolean.TRUE == singleContainer.getAttribute(ATTR_LANDSCAPE));
+                Boolean.TRUE == singleContainer.getAttribute(ATTR_LANDSCAPE),
+                (IPageContent) singleContainer.getAttribute(ATTR_PAGE_CONTENT));
 
             if (DEBUG)
             {
@@ -778,7 +781,7 @@ public class XlsRenderer implements IAreaVisitor
                 {
                     e2.printStackTrace();
                 }
-                
+
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
                 e.printStackTrace(new PrintStream(stream));
 
@@ -895,6 +898,9 @@ public class XlsRenderer implements IAreaVisitor
                             singleContainer.putAttribute(ATTR_LANDSCAPE,
                                 Boolean.TRUE);
                         }
+                        singleContainer
+                            .putAttribute(ATTR_PAGE_CONTENT, content);
+
                     }
                     else
                     {
@@ -927,7 +933,7 @@ public class XlsRenderer implements IAreaVisitor
                     // export body frame
                     Sheet modelSheet = Transformer.toSheet(bodyFrame, 1000,
                         fixedColumnWidth * 1000);
-                    exportSheet(modelSheet, landscape);
+                    exportSheet(modelSheet, landscape, content);
 
                     if (DEBUG)
                     {
@@ -955,6 +961,8 @@ public class XlsRenderer implements IAreaVisitor
                             singleContainer.putAttribute(ATTR_LANDSCAPE,
                                 Boolean.TRUE);
                         }
+                        singleContainer
+                            .putAttribute(ATTR_PAGE_CONTENT, content);
                     }
                     else
                     {
@@ -986,7 +994,7 @@ public class XlsRenderer implements IAreaVisitor
                     // one page completed, process it.
                     Sheet modelSheet = Transformer.toSheet(currentFrame, 1000,
                         fixedColumnWidth * 1000);
-                    exportSheet(modelSheet, landscape);
+                    exportSheet(modelSheet, landscape, content);
 
                     if (DEBUG)
                     {
@@ -1101,11 +1109,12 @@ public class XlsRenderer implements IAreaVisitor
         return "Sheet" + workbook.getNumSheets(); //$NON-NLS-1$
     }
 
-    final protected void exportSheet(Sheet modelSheet, boolean landscape)
+    final protected void exportSheet(Sheet modelSheet, boolean landscape,
+        IPageContent content)
     {
         try
         {
-            doExportSheet(modelSheet, landscape);
+            doExportSheet(modelSheet, landscape, content);
         }
         catch (Exception e)
         {
@@ -1113,8 +1122,8 @@ public class XlsRenderer implements IAreaVisitor
         }
     }
 
-    private void doExportSheet(Sheet modelSheet, boolean landscape)
-        throws Exception
+    private void doExportSheet(Sheet modelSheet, boolean landscape,
+        IPageContent content) throws Exception
     {
         modelSheets.add(modelSheet);
 
@@ -1169,53 +1178,61 @@ public class XlsRenderer implements IAreaVisitor
         rowShift = 0;
         columnShift = 0;
 
+        int rowTo = rowCount - 1;
+        int columnTo = columnCount - 1;
+
         if (removeEmptyRow)
         {
             // check blank rows.
-            for (int i = 0; i < rowCount; i++)
+            for (int row = 0; row < rowCount; row++)
             {
-                for (int j = 0; j < columnCount; j++)
+                for (int col = 0; col < columnCount; col++)
                 {
-                    Cell cell = modelSheet.getCell(i, j, false);
+                    Cell cell = modelSheet.getCell(row, col, false);
 
                     if (cell != null && isEffectiveCell(cell))
                     {
-                        nonBlankRow[i] = true;
+                        nonBlankRow[row] = true;
                         break;
                     }
                 }
             }
 
-            for (int i = 0; i < rowCount && !nonBlankRow[i]; i++)
+            for (int row = 0; row < rowCount && !nonBlankRow[row]; row++)
             {
                 rowShift++;
             }
 
-            // check blank columns
-            for (int j = 0; j < columnCount; j++)
+            for (int row = rowCount - 1; row >= 0 && !nonBlankRow[row]; row--)
             {
-                emptyColumn[j] = true;
+                rowTo = row;
+            }
 
-                for (int i = rowShift; i < rowCount; i++)
+            // check blank columns
+            for (int col = 0; col < columnCount; col++)
+            {
+                emptyColumn[col] = true;
+
+                for (int row = rowShift; row <= rowTo; row++)
                 {
-                    Cell cell = modelSheet.getCell(i, j, false);
+                    Cell cell = modelSheet.getCell(row, col, false);
 
                     if (cell != null && isEffectiveCell(cell))
                     {
-                        emptyColumn[j] = false;
+                        emptyColumn[col] = false;
                         break;
                     }
                 }
-
-                if (!emptyColumn[j])
-                {
-                    break;
-                }
             }
 
-            for (int j = 0; j < columnCount && emptyColumn[j]; j++)
+            for (int col = 0; col < columnCount && emptyColumn[col]; col++)
             {
                 columnShift++;
+            }
+
+            for (int col = columnCount - 1; col >= 0 && emptyColumn[col]; col--)
+            {
+                columnTo = col;
             }
 
             for (int y = rowCount - 1; y >= rowShift; y--)
@@ -1228,7 +1245,7 @@ public class XlsRenderer implements IAreaVisitor
             }
         }
 
-        for (short i = columnShift; i < columnCount; i++)
+        for (short i = columnShift; i <= columnTo; i++)
         {
             double width = modelSheet.getColumnWidth(i)
                 / (1000 * baseCharWidth);
@@ -1245,7 +1262,7 @@ public class XlsRenderer implements IAreaVisitor
 
         RangeStyle emptyCellStyle = processor.getEmptyCellStyle(false);
 
-        for (short y = rowShift; y < rowCount; y++)
+        for (short y = (short) (rowTo); y >= rowShift; y--)
         {
             if (!removeEmptyRow || nonBlankRow[y])
             {
@@ -1260,7 +1277,7 @@ public class XlsRenderer implements IAreaVisitor
                 workbook.setRowHeight(y - rowShift, 0);
             }
 
-            for (short x = columnShift; x < columnCount; x++)
+            for (short x = columnShift; x <= columnTo; x++)
             {
                 try
                 {
@@ -1278,11 +1295,11 @@ public class XlsRenderer implements IAreaVisitor
 
         Deque<MergeBlock> merged = new LinkedList<MergeBlock>();
 
-        for (short y = rowShift; y < rowCount; y++)
+        for (short y = rowShift; y <= rowTo; y++)
         {
             if (!removeEmptyRow || nonBlankRow[y])
             {
-                top: for (short x = columnShift; x < columnCount; x++)
+                top: for (short x = columnShift; x <= columnTo; x++)
                 {
                     Cell element = modelSheet.getCell(y, x, false);
                     if (element != null)
@@ -1306,6 +1323,45 @@ public class XlsRenderer implements IAreaVisitor
                 }
             }
         }
+
+        workbook.setPrintPaperSize(SmartxlsPaperSize.paperSize(content,
+            SmartxlsPaperSize.kPaperA4));
+
+        workbook.setPrintLeftMargin(convertMargin(content.getMarginLeft()));
+        workbook.setPrintRightMargin(convertMargin(content.getMarginRight()));
+        workbook.setPrintTopMargin(convertMargin(content.getMarginTop()));
+        workbook.setPrintBottomMargin(convertMargin(content.getMarginBottom()));
+
+        workbook.setPrintHeaderMargin(convertMargin(content.getHeaderHeight()));
+        workbook.setPrintFooterMargin(convertMargin(content.getFooterHeight()));
+
+        workbook.setPrintScaleFitToPage(true);
+        workbook.setPrintScaleFitHPages(1);
+        workbook.setPrintScaleFitVPages(0);
+    }
+
+    private static double convertMargin(DimensionType dimensionType)
+    {
+        String units = dimensionType.getUnits();
+        double margin;
+        if (DimensionType.UNITS_IN.equals(units))
+        {
+            margin = dimensionType.getMeasure();
+        }
+        else if (DimensionType.UNITS_CM.equals(units))
+        {
+            margin = dimensionType.getMeasure() / 2.54;
+        }
+        else if (DimensionType.UNITS_MM.equals(units))
+        {
+            margin = dimensionType.getMeasure() / 25.4;
+        }
+        else
+        {
+            margin = 1;
+        }
+
+        return margin;
     }
 
     protected MergeBlock exportCell(Cell element, short x, short y,
@@ -2110,8 +2166,7 @@ public class XlsRenderer implements IAreaVisitor
         }
 
         if (chart.getChartType() != ChartShape.Scatter
-            && chart.getChartType() != ChartShape.Bubble
-            && xFormula != null)
+            && chart.getChartType() != ChartShape.Bubble && xFormula != null)
         {
             chart.setCategoryFormula(xFormula);
         }
