@@ -1249,15 +1249,7 @@ public class XlsRenderer implements IAreaVisitor
         {
             double width = modelSheet.getColumnWidth(i)
                 / (1000 * baseCharWidth);
-
-            if (!removeEmptyRow || !emptyColumn[i])
-            {
-                workbook.setColWidth(i - columnShift, (short) (width * 256));
-            }
-            else
-            {
-                workbook.setColWidth(i - columnShift, 50);
-            }
+            workbook.setColWidth(i - columnShift, (short) (width * 256));
         }
 
         RangeStyle emptyCellStyle = processor.getEmptyCellStyle(false);
@@ -1327,41 +1319,42 @@ public class XlsRenderer implements IAreaVisitor
         workbook.setPrintPaperSize(SmartxlsPaperSize.paperSize(content,
             SmartxlsPaperSize.kPaperA4));
 
-        workbook.setPrintLeftMargin(convertMargin(content.getMarginLeft()));
-        workbook.setPrintRightMargin(convertMargin(content.getMarginRight()));
-        workbook.setPrintTopMargin(convertMargin(content.getMarginTop()));
-        workbook.setPrintBottomMargin(convertMargin(content.getMarginBottom()));
+        workbook.setPrintLeftMargin(content.getMarginLeft().convertTo(
+            DimensionType.UNITS_IN));
+        workbook.setPrintRightMargin(content.getMarginRight().convertTo(
+            DimensionType.UNITS_IN));
+        workbook.setPrintTopMargin(content.getMarginTop().convertTo(
+            DimensionType.UNITS_IN));
+        workbook.setPrintBottomMargin(content.getMarginBottom().convertTo(
+            DimensionType.UNITS_IN));
 
-        workbook.setPrintHeaderMargin(convertMargin(content.getHeaderHeight()));
-        workbook.setPrintFooterMargin(convertMargin(content.getFooterHeight()));
+        double printHeaderMargin = content.getHeaderHeight().convertTo(
+            DimensionType.UNITS_IN);
+        double printFooterMargin = content.getFooterHeight().convertTo(
+            DimensionType.UNITS_IN);
+        workbook.setPrintHeaderMargin(printHeaderMargin);
+        workbook.setPrintFooterMargin(printFooterMargin);
+        if (printHeaderMargin == 0)
+        {
+            workbook.setPrintHeader("");
+        }
+        if (printFooterMargin == 0)
+        {
+            workbook.setPrintFooter("");
+        }
 
         workbook.setPrintScaleFitToPage(true);
-        workbook.setPrintScaleFitHPages(1);
-        workbook.setPrintScaleFitVPages(0);
-    }
+        double printPageWidth = landscape ? 297 : 210;
+        double printPageHeight = landscape ? 210 : 297;
+        double printWidth = content.getPageWidth().convertTo(
+            DimensionType.UNITS_MM);
+        double printHeight = content.getPageHeight().convertTo(
+            DimensionType.UNITS_MM);
+        int hPages = (int) Math.ceil(printWidth / printPageWidth);
+        int vPages = (int) Math.ceil(printHeight / printPageHeight);
 
-    private static double convertMargin(DimensionType dimensionType)
-    {
-        String units = dimensionType.getUnits();
-        double margin;
-        if (DimensionType.UNITS_IN.equals(units))
-        {
-            margin = dimensionType.getMeasure();
-        }
-        else if (DimensionType.UNITS_CM.equals(units))
-        {
-            margin = dimensionType.getMeasure() / 2.54;
-        }
-        else if (DimensionType.UNITS_MM.equals(units))
-        {
-            margin = dimensionType.getMeasure() / 25.4;
-        }
-        else
-        {
-            margin = 1;
-        }
-
-        return margin;
+        workbook.setPrintScaleFitHPages(hPages);
+        workbook.setPrintScaleFitVPages(vPages);
     }
 
     protected MergeBlock exportCell(Cell element, short x, short y,

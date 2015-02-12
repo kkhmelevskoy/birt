@@ -81,10 +81,8 @@ public class SmartxlsPaperSize
                 normHeight = width;
             }
 
-            if (DesignChoiceConstants.UNITS_MM.equals(normWidth.getUnits())
-                && DesignChoiceConstants.UNITS_MM.equals(normHeight.getUnits())
-                && (int) normWidth.getMeasure() == 297
-                && (int) normHeight.getMeasure() == 420)
+            if ((int) normWidth.convertTo(DesignChoiceConstants.UNITS_MM) == 297
+                && (int) normHeight.convertTo(DesignChoiceConstants.UNITS_MM) == 420)
             {
                 paperSize = kPaperA3;
             }
