@@ -39,6 +39,7 @@ import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
 import org.eclipse.birt.report.engine.nLayout.area.style.BoxStyle;
 import org.eclipse.birt.report.engine.nLayout.area.style.TextStyle;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
+import org.uguess.birt.report.engine.layout.wrapper.impl.HasArea;
 import org.uguess.birt.report.engine.layout.wrapper.impl.MultiAreaFrame;
 import org.uguess.birt.report.engine.util.EngineUtil;
 
@@ -53,7 +54,7 @@ public class XlsRenderer2 extends XlsRenderer
     private Stack<IArea> areaStack;
     private Stack<IArea> clipStack;
     private IArea bodyArea;
-    
+
     public XlsRenderer2(String format)
     {
         super(format);
@@ -410,7 +411,7 @@ public class XlsRenderer2 extends XlsRenderer
     /**
      * AreaWrapper
      */
-    public static class AreaWrapper implements IArea
+    public static class AreaWrapper implements IArea, HasArea
     {
 
         protected IArea area;
@@ -424,6 +425,7 @@ public class XlsRenderer2 extends XlsRenderer
             y = area.getY();
         }
 
+        @Override
         public IArea getArea()
         {
             return area;
@@ -542,7 +544,7 @@ public class XlsRenderer2 extends XlsRenderer
             {
                 text = "";
             }
-            
+
             return text;
         }
 
@@ -552,7 +554,7 @@ public class XlsRenderer2 extends XlsRenderer
             {
                 logicText = "";
             }
-            
+
             return logicText;
         }
 
