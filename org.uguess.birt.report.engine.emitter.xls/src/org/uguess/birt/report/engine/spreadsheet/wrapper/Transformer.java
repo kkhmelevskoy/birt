@@ -23,10 +23,14 @@ import java.util.List;
 
 import org.eclipse.birt.report.engine.css.engine.StyleConstants;
 import org.eclipse.birt.report.engine.ir.GridItemDesign;
+import org.eclipse.birt.report.engine.ir.ReportElementDesign;
 import org.eclipse.birt.report.engine.ir.TableItemDesign;
 import org.eclipse.birt.report.engine.nLayout.area.IArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.CellArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.ContainerArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.TableArea;
+import org.eclipse.birt.report.model.api.DesignElementHandle;
+import org.eclipse.birt.report.model.core.DesignElement;
 import org.uguess.birt.report.engine.emitter.xls.XlsRenderer2.AreaWrapper;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.Style;
@@ -247,10 +251,10 @@ public class Transformer
         if (area instanceof TableArea)
         {
             TableArea tableArea = (TableArea) area;
-//            System.out.println(tableArea.isCanShrink());
-//            System.out.println(tableArea.isGridDesign());
-//            System.out.println(tableArea.isIgnoreReordering());
-//            System.out.println(tableArea.isInlineStacking());
+            // System.out.println(tableArea.isCanShrink());
+            // System.out.println(tableArea.isGridDesign());
+            // System.out.println(tableArea.isIgnoreReordering());
+            // System.out.println(tableArea.isInlineStacking());
         }
         if (!(area instanceof CellArea))
         {
@@ -601,6 +605,22 @@ public class Transformer
         {
             element = it.next();
             IArea area = getArea(element);
+            boolean allowExport = true;
+
+            if (area instanceof ContainerArea)
+            {
+                Object generateBy = ((ContainerArea) area).getContent()
+                    .getGenerateBy();
+                if (generateBy instanceof ReportElementDesign)
+                {
+                    Object allowExportProperty = ((ReportElementDesign) generateBy)
+                        .getHandle().getProperty("allowExport");
+                    if (Boolean.FALSE.equals(allowExportProperty))
+                    {
+                        allowExport = false;
+                    }
+                }
+            }
 
             if (cellCoordinate != null)
             {
@@ -612,101 +632,105 @@ public class Transformer
                     yOffset, sheet, defaultCell);
             }
 
-            if (area instanceof TableArea)
+            if (allowExport)
             {
-                try
+                if (area instanceof TableArea)
                 {
-                    TableArea tableArea = (TableArea) area;
-
-                    Object generateBy = tableArea.getContent().getGenerateBy();
-
-                    if (generateBy instanceof TableItemDesign)
+                    try
                     {
-                        TableItemDesign tableItemDesign = (TableItemDesign) generateBy;
+                        TableArea tableArea = (TableArea) area;
 
-                        Coordinate tableCoord = new Coordinate();
+                        Object generateBy = tableArea.getContent()
+                            .getGenerateBy();
 
-                        tableCoord.x1 = coord.x1;
-                        tableCoord.x2 = coord.x2;
-                        tableCoord.y1 = coord.y1;
-                        tableCoord.y2 = coord.y2;
+                        if (generateBy instanceof TableItemDesign)
+                        {
+                            TableItemDesign tableItemDesign = (TableItemDesign) generateBy;
 
-                        sheet.addTableCoord(tableItemDesign.getName(),
-                            tableCoord);
+                            Coordinate tableCoord = new Coordinate();
+
+                            tableCoord.x1 = coord.x1;
+                            tableCoord.x2 = coord.x2;
+                            tableCoord.y1 = coord.y1;
+                            tableCoord.y2 = coord.y2;
+
+                            sheet.addTableCoord(tableItemDesign.getName(),
+                                tableCoord);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
                     }
                 }
-                catch (Exception e)
+
+                if (area instanceof CellArea)
                 {
-                    e.printStackTrace();
+                    cellCoordinate = coord;
                 }
-            }
 
-            if (area instanceof CellArea)
-            {
-                cellCoordinate = coord;
-            }
-
-            // skip zero size element.
-            if (coord == null)
-            {
-                continue;
-            }
-
-            style = LocalStyle.create(new Style[] {element.getStyle(),
-                currentStyle});
-
-            if (hasChildren(element))
-            {
-                layoutChildren(xCuts, yCuts, sheet, defaultCell, element,
-                    style, xOffset, yOffset);
-
-                setParentsStyle(sheet, defaultCell, coord, style);
-            }
-            else
-            {
-                Cell cell = sheet.getCell(coord.y1, coord.x1, false);
-                Object data = element.getData();
-
-                if (coord.x1 == coord.x2 && coord.y1 == coord.y2)
+                // skip zero size element.
+                if (coord == null)
                 {
-                    // A single cell case.
-                    if (cell != defaultCell)
-                    {
-                        System.out
-                            .println("[WARNING]:An existing single cell detected"); //$NON-NLS-1$
-                    }
-                    sheet.setCell(coord.y1, coord.x1, data, style);
+                    continue;
                 }
-                else if (coord.x2 < coord.x1 || coord.y2 < coord.y1)
+
+                style = LocalStyle.create(new Style[] {element.getStyle(),
+                    currentStyle});
+
+                if (hasChildren(element))
                 {
-                    // Invalid case.
-                    System.out
-                        .println("[WARNING]:Invalid coordinate detected: Right(" //$NON-NLS-1$
-                            + coord.x2 + ") < Left(" //$NON-NLS-1$
-                            + coord.x1 + ") or Bottom(" //$NON-NLS-1$
-                            + coord.y2 + ") < Top(" //$NON-NLS-1$
-                            + coord.y1 + ")"); //$NON-NLS-1$
+                    layoutChildren(xCuts, yCuts, sheet, defaultCell, element,
+                        style, xOffset, yOffset);
+
+                    setParentsStyle(sheet, defaultCell, coord, style);
                 }
                 else
                 {
-                    // Try merge first.
-                    if (sheet.addMergeBlock(coord.y1, coord.x1, coord.y2,
-                        coord.x2).isEmpty())
-                    {
-                        // Can't merge
-                        System.out.println("[WARNING]:Coordinate" //$NON-NLS-1$
-                            + coord + " is overlapped"); //$NON-NLS-1$
+                    Cell cell = sheet.getCell(coord.y1, coord.x1, false);
+                    Object data = element.getData();
 
-                        if (adjustOverlap(sheet, coord))
+                    if (coord.x1 == coord.x2 && coord.y1 == coord.y2)
+                    {
+                        // A single cell case.
+                        if (cell != defaultCell)
                         {
-                            // merge the new block
-                            mergeOverlap(sheet, element, coord, data, style);
+                            System.out
+                                .println("[WARNING]:An existing single cell detected"); //$NON-NLS-1$
                         }
+                        sheet.setCell(coord.y1, coord.x1, data, style);
+                    }
+                    else if (coord.x2 < coord.x1 || coord.y2 < coord.y1)
+                    {
+                        // Invalid case.
+                        System.out
+                            .println("[WARNING]:Invalid coordinate detected: Right(" //$NON-NLS-1$
+                                + coord.x2 + ") < Left(" //$NON-NLS-1$
+                                + coord.x1 + ") or Bottom(" //$NON-NLS-1$
+                                + coord.y2 + ") < Top(" //$NON-NLS-1$
+                                + coord.y1 + ")"); //$NON-NLS-1$
                     }
                     else
                     {
-                        setChildStyle(sheet, coord, style);
-                        sheet.setCell(coord.y1, coord.x1, data);
+                        // Try merge first.
+                        if (sheet.addMergeBlock(coord.y1, coord.x1, coord.y2,
+                            coord.x2).isEmpty())
+                        {
+                            // Can't merge
+                            System.out.println("[WARNING]:Coordinate" //$NON-NLS-1$
+                                + coord + " is overlapped"); //$NON-NLS-1$
+
+                            if (adjustOverlap(sheet, coord))
+                            {
+                                // merge the new block
+                                mergeOverlap(sheet, element, coord, data, style);
+                            }
+                        }
+                        else
+                        {
+                            setChildStyle(sheet, coord, style);
+                            sheet.setCell(coord.y1, coord.x1, data);
+                        }
                     }
                 }
             }
