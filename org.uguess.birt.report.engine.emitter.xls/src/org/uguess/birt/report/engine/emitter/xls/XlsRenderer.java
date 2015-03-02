@@ -156,6 +156,7 @@ import org.eclipse.birt.report.engine.nLayout.area.IImageArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITemplateArea;
 import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.ContainerArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.ImageArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
@@ -190,7 +191,7 @@ import com.smartxls.WorkBook;
  */
 public class XlsRenderer implements IAreaVisitor
 {
-
+    private static final int PRECISION = 1000;
     private static final int MAX_SHEET_NAME_LENGTH = 31;
     public static final String DEFAULT_FILE_NAME = "report.xls"; //$NON-NLS-1$
     protected static final String XLS_IDENTIFIER = "xls"; //$NON-NLS-1$
@@ -746,8 +747,8 @@ public class XlsRenderer implements IAreaVisitor
             long span = System.currentTimeMillis();
 
             // process single sheet here.
-            Sheet modelSheet = Transformer.toSheet(singleContainer, 1000,
-                fixedColumnWidth * 1000);
+            Sheet modelSheet = Transformer.toSheet(singleContainer, PRECISION,
+                fixedColumnWidth * PRECISION);
             exportSheet(modelSheet,
                 Boolean.TRUE == singleContainer.getAttribute(ATTR_LANDSCAPE),
                 (IPageContent) singleContainer.getAttribute(ATTR_PAGE_CONTENT));
@@ -931,8 +932,8 @@ public class XlsRenderer implements IAreaVisitor
                 else
                 {
                     // export body frame
-                    Sheet modelSheet = Transformer.toSheet(bodyFrame, 1000,
-                        fixedColumnWidth * 1000);
+                    Sheet modelSheet = Transformer.toSheet(bodyFrame,
+                        PRECISION, fixedColumnWidth * PRECISION);
                     exportSheet(modelSheet, landscape, content);
 
                     if (DEBUG)
@@ -992,8 +993,8 @@ public class XlsRenderer implements IAreaVisitor
                 else
                 {
                     // one page completed, process it.
-                    Sheet modelSheet = Transformer.toSheet(currentFrame, 1000,
-                        fixedColumnWidth * 1000);
+                    Sheet modelSheet = Transformer.toSheet(currentFrame,
+                        PRECISION, fixedColumnWidth * PRECISION);
                     exportSheet(modelSheet, landscape, content);
 
                     if (DEBUG)
@@ -1408,7 +1409,7 @@ public class XlsRenderer implements IAreaVisitor
         workbook.setRangeStyle(cellStyle, y - rowShift, x - columnShift, y2
             - rowShift, x2 - columnShift);
 
-        exportCellData(element, cell);
+        exportCellData(element, modelSheet, cell);
 
         return mb;
     }
@@ -1418,7 +1419,8 @@ public class XlsRenderer implements IAreaVisitor
         return value;
     }
 
-    protected void exportCellData(Cell element, XlsCell cell) throws Exception
+    protected void exportCellData(Cell element, Sheet modelSheet, XlsCell cell)
+        throws Exception
     {
         if (isTotalPageArea(element.getValue()))
         {
@@ -1448,7 +1450,7 @@ public class XlsRenderer implements IAreaVisitor
             }
             else
             {
-                exportImage((IImageArea) cellValue, cell);
+                exportImage((IImageArea) cellValue, modelSheet, cell);
             }
         }
         else if (cellValue instanceof ITextArea)
@@ -2426,9 +2428,10 @@ public class XlsRenderer implements IAreaVisitor
             + s.getClass().getName());
     }
 
-    protected void exportImage(IImageArea image, XlsCell cell) throws Exception
+    protected void exportImage(IImageArea image, Sheet modelSheet, XlsCell cell)
+        throws Exception
     {
-        PictureShape shape = loadPicture(image, cell);
+        PictureShape shape = loadPicture(image, modelSheet, cell);
 
         if (shape != null)
         {
@@ -2610,8 +2613,8 @@ public class XlsRenderer implements IAreaVisitor
         return false;
     }
 
-    protected PictureShape loadPicture(IImageArea imageArea, XlsCell cell)
-        throws Exception
+    protected PictureShape loadPicture(IImageArea imageArea, Sheet modelSheet,
+        XlsCell cell) throws Exception
     {
         byte[] data = imageArea.getImageData();
 
@@ -2638,8 +2641,32 @@ public class XlsRenderer implements IAreaVisitor
                 }
             }
 
-            return workbook.addPicture(cell.x - columnShift, cell.y - rowShift,
-                cell.x2 + 1 - columnShift, cell.y2 + 1 - rowShift, data);
+            double cellWidth = 0;
+            double cellHeight = 0;
+            for (int i = cell.x; i <= cell.x2; i++)
+            {
+                cellWidth += modelSheet.getColumnWidth(i);
+            }
+            for (int i = cell.y; i <= cell.y2; i++)
+            {
+                cellHeight += modelSheet.getRowHeight(i);
+            }
+
+            double x = cell.x - columnShift;
+            double y = cell.y - rowShift;
+            if (imageArea instanceof ImageArea)
+            {
+                x += ((ImageArea) imageArea).getParent().getX() / cellWidth;
+                y += ((ImageArea) imageArea).getParent().getY() / cellHeight;
+            }
+
+            double width = imageArea.getWidth() / cellWidth;
+            double height = imageArea.getHeight() / cellHeight;
+
+            PictureShape picture = workbook.addPicture(x, y, x + width, y
+                + height, data);
+
+            return picture;
         }
 
         return null;
