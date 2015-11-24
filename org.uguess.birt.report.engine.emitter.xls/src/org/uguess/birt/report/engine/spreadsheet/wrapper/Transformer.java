@@ -211,6 +211,12 @@ public class Transformer
         rc.x2 = shear(element.getRight() + xOffset);
         rc.y2 = shear(element.getBottom() + yOffset);
 
+        IArea area = getArea(element);
+        if (area != null)
+        {
+            rc.x2 = rc.x1 + area.getWidth();
+        }
+        
         // ignore zero width/height block
         if (rc.x1 == rc.x2 || rc.y1 == rc.y2)
         {
@@ -247,7 +253,6 @@ public class Transformer
             yCuts.add(cut);
         }
 
-        IArea area = getArea(element);
         if (area instanceof TableArea)
         {
             TableArea tableArea = (TableArea) area;
@@ -549,6 +554,12 @@ public class Transformer
         coords.y1 = shear(element.getTop() + yOffset);
         coords.x2 = shear(element.getRight() + xOffset);
         coords.y2 = shear(element.getBottom() + yOffset);
+
+        IArea area = getArea(element);
+        if (area != null)
+        {
+            coords.x2 = coords.x1 + area.getWidth();
+        }
 
         // ignore zero width/height block
         if (coords.x1 == coords.x2 || coords.y1 == coords.y2)
