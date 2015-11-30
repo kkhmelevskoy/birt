@@ -1546,10 +1546,15 @@ public class XlsRenderer implements IAreaVisitor
     private static String chartDataSheetName(String prefix, String title,
         int chartIndex)
     {
-        chartIndex++;
+        return chartDataSheetName(prefix, title, chartIndex, false);
+    }
 
+    private static String chartDataSheetName(String prefix, String title,
+        int chartIndex, boolean shrinkPrefix)
+    {
         // StringBuilder name = new StringBuilder("График " + chartIndex);
-        StringBuilder name = new StringBuilder(prefix != null ? prefix + " - "
+        StringBuilder name = new StringBuilder(prefix != null ? 
+            (shrinkPrefix ? abbreviate(prefix) : prefix) + " - "
             : ""); // Use chart index to make sheet name unique.
 
         if (title != null)
@@ -1566,16 +1571,41 @@ public class XlsRenderer implements IAreaVisitor
         }
         else
         {
-            name.append(chartIndex);
+            name.append("График " + (chartIndex + 1));
         }
 
         if (name.length() > MAX_SHEET_NAME_LENGTH)
         {
             // Make sure that name is not too long for excel sheet name.
-            name.setLength(MAX_SHEET_NAME_LENGTH);
+            if (!shrinkPrefix)
+            {
+                return chartDataSheetName(prefix, title, chartIndex, true);
+            }
+            else
+            {
+                name.setLength(MAX_SHEET_NAME_LENGTH);
+            }
         }
 
         return name.toString();
+    }
+
+    private static String abbreviate(String text)
+    {   
+        String s = text;
+        while (s.indexOf("  ") > -1)
+        {
+            s = text.replace("  ", " ");
+        }
+        
+        StringBuffer buffer = new StringBuffer();
+        String[] words = s.split(" ");
+        
+        for (int i = 0; i < words.length; i++) {
+            buffer.append(words[i].substring(0, 1).toUpperCase());
+        }
+        
+        return buffer.toString();
     }
 
     private static boolean legendVisisble(Legend legend)
