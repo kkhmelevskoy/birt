@@ -1250,7 +1250,7 @@ public class XlsRenderer implements IAreaVisitor
         {
             double width = modelSheet.getColumnWidth(i)
                 / (1000 * baseCharWidth);
-            workbook.setColWidth(i - columnShift, (short) (width * 256));
+            workbook.setColWidth(i - columnShift, (int) (width * 256));
         }
 
         RangeStyle emptyCellStyle = processor.getEmptyCellStyle(false);
