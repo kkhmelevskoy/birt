@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1251"?>
 <project name="BuildBirtProject" default="buildProject" basedir=".">
 	<property name="base.dir" value=".." />
-	<property name="encoding" value="cp1251" />
+	<property name="encoding" value="UTF-8" />
 	<property name="javac.executable" value="" />
 	<property name="project.dir" value="" />
 	<property name="project.lib.dir" value="${project.dir}/lib" />
