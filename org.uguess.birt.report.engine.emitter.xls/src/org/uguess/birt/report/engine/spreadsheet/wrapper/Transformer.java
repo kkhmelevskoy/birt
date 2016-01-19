@@ -22,15 +22,15 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.birt.report.engine.css.engine.StyleConstants;
-import org.eclipse.birt.report.engine.ir.GridItemDesign;
 import org.eclipse.birt.report.engine.ir.ReportElementDesign;
 import org.eclipse.birt.report.engine.ir.TableItemDesign;
 import org.eclipse.birt.report.engine.nLayout.area.IArea;
+import org.eclipse.birt.report.engine.nLayout.area.IContainerArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.CellArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.ContainerArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.RowArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.TableArea;
-import org.eclipse.birt.report.model.api.DesignElementHandle;
-import org.eclipse.birt.report.model.core.DesignElement;
+import org.eclipse.birt.report.engine.nLayout.area.impl.TableGroupArea;
 import org.uguess.birt.report.engine.emitter.xls.XlsRenderer2.AreaWrapper;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.Style;
@@ -42,7 +42,6 @@ import org.uguess.birt.report.engine.spreadsheet.model.impl.SheetImpl;
 
 public class Transformer
 {
-
     private final static int PRECISION_THRESHOLD = 1;
 
     private int prec = PRECISION_THRESHOLD;
@@ -212,11 +211,40 @@ public class Transformer
         rc.y2 = shear(element.getBottom() + yOffset);
 
         IArea area = getArea(element);
-        if (area != null)
+        if (area != null && area instanceof CellArea)
         {
-            rc.x2 = rc.x1 + area.getWidth();
+            // TODO
+            ContainerArea parent = ((CellArea) area).getParent();
+            TableArea tableArea = getTableArea((CellArea) area);
+            boolean tableHasGroupArea = hasGroupArea(tableArea);
+
+            if (parent instanceof RowArea && tableHasGroupArea)
+            {
+                RowArea rowArea = (RowArea) parent;
+                int index = rowArea.indexOf(area);
+                if (index > -1)
+                {
+                    if (index < rowArea.getChildrenCount() - 1)
+                    {
+                        IArea nextCell = rowArea.getChild(index + 1);
+                        int x2 = shear(nextCell.getX() + xOffset);
+                        if (rc.x2 != x2)
+                        {
+                            rc.x2 = x2;
+                        }
+                    }
+                    else
+                    {
+                        int x2 = shear(rowArea.getWidth() + xOffset);
+                        if (rc.x2 != x2)
+                        {
+                            rc.x2 = x2;
+                        }
+                    }
+                }
+            }
         }
-        
+
         // ignore zero width/height block
         if (rc.x1 == rc.x2 || rc.y1 == rc.y2)
         {
@@ -253,15 +281,11 @@ public class Transformer
             yCuts.add(cut);
         }
 
-        if (area instanceof TableArea)
-        {
-            TableArea tableArea = (TableArea) area;
-            // System.out.println(tableArea.isCanShrink());
-            // System.out.println(tableArea.isGridDesign());
-            // System.out.println(tableArea.isIgnoreReordering());
-            // System.out.println(tableArea.isInlineStacking());
-        }
-        if (!(area instanceof CellArea))
+        // if (area instanceof TableArea)
+        // {
+        // TableArea tableArea = (TableArea) area;
+        // }
+        if (!(area instanceof CellArea) || hasTableAreaInCell((CellArea) area))
         {
             for (Iterator<Frame> it = element.iterator(); it.hasNext();)
             {
@@ -269,6 +293,64 @@ public class Transformer
                 computeFragments(xCuts, yCuts, frame, xOffset, yOffset);
             }
         }
+    }
+
+    private TableArea getTableArea(CellArea cellArea)
+    {
+        ContainerArea parent = cellArea;
+
+        while (parent != null && !(parent instanceof TableArea))
+        {
+            parent = parent.getParent();
+        }
+
+        return parent instanceof TableArea ? (TableArea) parent : null;
+    }
+
+    private boolean hasGroupArea(TableArea tableArea)
+    {
+        boolean result = false;
+
+        if (tableArea != null)
+        {
+            Iterator<IArea> children = tableArea.getChildren();
+            while (children.hasNext() && !result)
+            {
+                result = children.next() instanceof TableGroupArea;
+            }
+        }
+
+        return result;
+    }
+
+    private boolean hasTableAreaInCell(CellArea cellArea)
+    {
+        return hasTableAreaImpl(cellArea);
+    }
+
+    private boolean hasTableAreaImpl(IContainerArea area)
+    {
+        boolean result = false;
+
+        if (area.getChildrenCount() > 0)
+        {
+            Iterator<IArea> children = area.getChildren();
+            while (children.hasNext() && !result)
+            {
+                IArea child = children.next();
+
+                if (child instanceof TableArea)
+                {
+                    result = true;
+                }
+                else if (child instanceof IContainerArea)
+                {
+                    result = hasTableAreaImpl((IContainerArea) child);
+                }
+            }
+        }
+
+        return result;
     }
 
     private boolean hasChildren(Frame elems)
@@ -556,9 +638,38 @@ public class Transformer
         coords.y2 = shear(element.getBottom() + yOffset);
 
         IArea area = getArea(element);
-        if (area != null)
+        if (area != null && area instanceof CellArea)
         {
-            coords.x2 = coords.x1 + area.getWidth();
+            // TODO
+            ContainerArea parent = ((CellArea) area).getParent();
+            TableArea tableArea = getTableArea((CellArea) area);
+            boolean tableHasGroupArea = hasGroupArea(tableArea);
+
+            if (parent instanceof RowArea && tableHasGroupArea)
+            {
+                RowArea rowArea = (RowArea) parent;
+                int index = rowArea.indexOf(area);
+                if (index > -1)
+                {
+                    if (index < rowArea.getChildrenCount() - 1)
+                    {
+                        IArea nextCell = rowArea.getChild(index + 1);
+                        int x2 = shear(nextCell.getX() + xOffset);
+                        if (coords.x2 != x2)
+                        {
+                            coords.x2 = x2;
+                        }
+                    }
+                    else
+                    {
+                        int x2 = shear(rowArea.getWidth() + xOffset);
+                        if (coords.x2 != x2)
+                        {
+                            coords.x2 = x2;
+                        }
+                    }
+                }
+            }
         }
 
         // ignore zero width/height block
@@ -675,7 +786,9 @@ public class Transformer
                     }
                 }
 
-                if (area instanceof CellArea)
+                // TODO
+                if (area instanceof CellArea
+                    && !hasTableAreaInCell((CellArea) area))
                 {
                     cellCoordinate = coord;
                 }
