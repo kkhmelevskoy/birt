@@ -18,6 +18,7 @@ package org.uguess.birt.report.engine.spreadsheet.wrapper;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -47,6 +48,7 @@ public class Transformer
     private int prec = PRECISION_THRESHOLD;
     private int fixedColumnWidth = -1;
     private int halfprec = prec / 2;
+    private HashMap<Frame, Integer> elementBottomMap = new HashMap<Frame, Integer>();
 
     public static Sheet toSheet(Frame frame)
     {
@@ -210,6 +212,12 @@ public class Transformer
         rc.x2 = shear(element.getRight() + xOffset);
         rc.y2 = shear(element.getBottom() + yOffset);
 
+        int b = shear(getBottom(element) + yOffset);
+        if (b > rc.y2)
+        {
+            rc.y2 = b;
+        }
+
         IArea area = getArea(element);
         if (area != null && area instanceof CellArea)
         {
@@ -228,7 +236,7 @@ public class Transformer
                     {
                         IArea nextCell = rowArea.getChild(index + 1);
                         int x2 = shear(nextCell.getX() + xOffset);
-                        if (rc.x2 != x2)
+                        if (rc.x2 < x2)
                         {
                             rc.x2 = x2;
                         }
@@ -236,7 +244,7 @@ public class Transformer
                     else
                     {
                         int x2 = shear(rowArea.getWidth() + xOffset);
-                        if (rc.x2 != x2)
+                        if (rc.x2 < x2)
                         {
                             rc.x2 = x2;
                         }
@@ -281,10 +289,6 @@ public class Transformer
             yCuts.add(cut);
         }
 
-        // if (area instanceof TableArea)
-        // {
-        // TableArea tableArea = (TableArea) area;
-        // }
         if (!(area instanceof CellArea) || hasTableAreaInCell((CellArea) area))
         {
             for (Iterator<Frame> it = element.iterator(); it.hasNext();)
@@ -293,6 +297,29 @@ public class Transformer
                 computeFragments(xCuts, yCuts, frame, xOffset, yOffset);
             }
         }
+    }
+
+    private int getBottom(Frame element)
+    {
+        Integer result = elementBottomMap.get(element);
+
+        if (result == null)
+        {
+            result = 0;
+
+            for (Iterator<Frame> it = element.iterator(); it.hasNext();)
+            {
+                Frame frame = it.next();
+                int bottom = getBottom(frame);
+                result = bottom > result ? bottom : result;
+            }
+
+            result = element.getBottom() < result ? result
+                : element.getBottom();
+            elementBottomMap.put(element, result);
+        }
+
+        return result.intValue();
     }
 
     private TableArea getTableArea(CellArea cellArea)
@@ -452,8 +479,8 @@ public class Transformer
                     }
 
                     // set directly for optimization
-                    newStyle.setProperty(
-                        StyleConstants.STYLE_BORDER_LEFT_STYLE, null);
+                    newStyle.setProperty(StyleConstants.STYLE_BORDER_LEFT_STYLE,
+                        null);
                 }
                 if (xi != coords.x2)
                 {
@@ -479,8 +506,8 @@ public class Transformer
                     {
                         newStyle = LocalStyle.create(style);
                     }
-                    newStyle.setProperty(
-                        StyleConstants.STYLE_BORDER_BOTTOM_STYLE, null);
+                    // newStyle.setProperty(
+                    // StyleConstants.STYLE_BORDER_BOTTOM_STYLE, null);
                 }
 
                 if (newStyle != null)
@@ -637,6 +664,12 @@ public class Transformer
         coords.x2 = shear(element.getRight() + xOffset);
         coords.y2 = shear(element.getBottom() + yOffset);
 
+        int b = shear(getBottom(element) + yOffset);
+        if (b > coords.y2)
+        {
+            coords.y2 = b;
+        }
+
         IArea area = getArea(element);
         if (area != null && area instanceof CellArea)
         {
@@ -655,7 +688,7 @@ public class Transformer
                     {
                         IArea nextCell = rowArea.getChild(index + 1);
                         int x2 = shear(nextCell.getX() + xOffset);
-                        if (coords.x2 != x2)
+                        if (coords.x2 < x2)
                         {
                             coords.x2 = x2;
                         }
@@ -663,7 +696,7 @@ public class Transformer
                     else
                     {
                         int x2 = shear(rowArea.getWidth() + xOffset);
-                        if (coords.x2 != x2)
+                        if (coords.x2 < x2)
                         {
                             coords.x2 = x2;
                         }
