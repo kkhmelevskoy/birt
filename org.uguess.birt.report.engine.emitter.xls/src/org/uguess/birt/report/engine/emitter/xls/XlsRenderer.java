@@ -129,6 +129,7 @@ import org.eclipse.birt.chart.model.type.ScatterSeries;
 import org.eclipse.birt.chart.reportitem.ChartReportItemImpl;
 import org.eclipse.birt.chart.util.ChartUtil;
 import org.eclipse.birt.chart.util.FillUtil;
+import org.eclipse.birt.core.format.NumberFormatter;
 import org.eclipse.birt.report.engine.api.IHTMLActionHandler;
 import org.eclipse.birt.report.engine.api.IRenderOption;
 import org.eclipse.birt.report.engine.api.IReportRunnable;
@@ -143,8 +144,10 @@ import org.eclipse.birt.report.engine.content.IPageContent;
 import org.eclipse.birt.report.engine.content.IReportContent;
 import org.eclipse.birt.report.engine.content.ITableContent;
 import org.eclipse.birt.report.engine.content.ITableGroupContent;
+import org.eclipse.birt.report.engine.content.impl.DataContent;
 import org.eclipse.birt.report.engine.content.impl.PageContent;
 import org.eclipse.birt.report.engine.content.impl.ReportContent;
+import org.eclipse.birt.report.engine.css.engine.value.DataFormatValue;
 import org.eclipse.birt.report.engine.emitter.IEmitterServices;
 import org.eclipse.birt.report.engine.ir.DimensionType;
 import org.eclipse.birt.report.engine.ir.GroupDesign;
@@ -158,10 +161,12 @@ import org.eclipse.birt.report.engine.nLayout.area.ITextArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.ContainerArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.ImageArea;
 import org.eclipse.birt.report.engine.nLayout.area.impl.PageArea;
+import org.eclipse.birt.report.engine.nLayout.area.impl.TextArea;
 import org.eclipse.birt.report.model.api.ReportElementHandle;
 import org.eclipse.birt.report.model.api.elements.DesignChoiceConstants;
 import org.eclipse.birt.report.model.core.DesignElement;
 import org.eclipse.emf.common.util.EList;
+import org.uguess.birt.report.engine.emitter.xls.XlsRenderer2.TextAreaWrapper;
 import org.uguess.birt.report.engine.layout.wrapper.Frame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AggregateFrame;
 import org.uguess.birt.report.engine.layout.wrapper.impl.AreaFrame;
@@ -248,6 +253,8 @@ public class XlsRenderer implements IAreaVisitor
     private short rowShift;
     private short columnShift;
     private String format;
+
+    private HashMap<String, NumberFormatter> numberFormatters = new HashMap<String, NumberFormatter>();
 
     public XlsRenderer(String format)
     {
@@ -834,6 +841,8 @@ public class XlsRenderer implements IAreaVisitor
         workbook = null;
         frameStack = null;
         singleContainer = null;
+
+        numberFormatters.clear();
 
         if (DEBUG)
         {
@@ -1553,9 +1562,9 @@ public class XlsRenderer implements IAreaVisitor
         int chartIndex, boolean shrinkPrefix)
     {
         // StringBuilder name = new StringBuilder("График " + chartIndex);
-        StringBuilder name = new StringBuilder(prefix != null ? 
-            (shrinkPrefix ? abbreviate(prefix) : prefix) + " - "
-            : ""); // Use chart index to make sheet name unique.
+        StringBuilder name = new StringBuilder(
+            prefix != null ? (shrinkPrefix ? abbreviate(prefix) : prefix)
+                + " - " : ""); // Use chart index to make sheet name unique.
 
         if (title != null)
         {
@@ -1591,20 +1600,21 @@ public class XlsRenderer implements IAreaVisitor
     }
 
     private static String abbreviate(String text)
-    {   
+    {
         String s = text;
         while (s.indexOf("  ") > -1)
         {
             s = text.replace("  ", " ");
         }
-        
+
         StringBuffer buffer = new StringBuffer();
         String[] words = s.split(" ");
-        
-        for (int i = 0; i < words.length; i++) {
+
+        for (int i = 0; i < words.length; i++)
+        {
             buffer.append(words[i].substring(0, 1).toUpperCase());
         }
-        
+
         return buffer.toString();
     }
 
@@ -2476,9 +2486,104 @@ public class XlsRenderer implements IAreaVisitor
         }
     }
 
+    public NumberFormatter getNumberFormatter(String pattern, String locale)
+    {
+        String key = pattern + ":" + locale;
+        NumberFormatter fmt = numberFormatters.get(key);
+        if (fmt == null)
+        {
+            ULocale loc = ulocale;
+            if (locale != null)
+            {
+                loc = new ULocale(locale);
+            }
+            fmt = new NumberFormatter(pattern, loc);
+            numberFormatters.put(key, fmt);
+        }
+
+        return fmt;
+    }
+
     protected void exportText(ITextArea text, XlsCell cell)
     {
-        exportText(text.getText(), cell);
+        String strText = text.getText();
+        IArea area = text;
+        TextArea textArea = null;
+        if (area instanceof TextAreaWrapper)
+        {
+            area = ((TextAreaWrapper) text).area;
+        }
+        if (area instanceof TextArea)
+        {
+            textArea = (TextArea) area;
+        }
+
+        NumberFormatter formatter = null;
+        Number numberValue = null;
+        if (textArea != null)
+        {
+            ContainerArea container = textArea.getParent();
+            while (container != null && container.getContent() == null)
+            {
+                container = container.getParent();
+            }
+            IContent content = container.getContent();
+            if (content instanceof DataContent)
+            {
+                String dataContentText = ((DataContent) content).getText();
+
+                if (dataContentText == strText
+                    || (strText != null && strText.equals(dataContentText)))
+                {
+                    Object value = ((DataContent) content).getValue();
+                    if (value instanceof Number)
+                    {
+                        DataFormatValue dataFormat = content.getComputedStyle()
+                            .getDataFormat();
+                        if (dataFormat != null)
+                        {
+                            String pattern = dataFormat.getNumberPattern();
+                            String locale = dataFormat.getNumberLocale();
+                            formatter = getNumberFormatter(pattern, locale);
+                            if (formatter.getFormatCode() != null)
+                            {
+                                numberValue = (Number) value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (numberValue != null)
+        {
+            exportNumber(numberValue, formatter, cell, strText);
+        }
+        else
+        {
+            exportText(strText, cell);
+        }
+    }
+
+    protected void exportNumber(Number value, NumberFormatter numberFormatter,
+        XlsCell cell, String fallbackText)
+    {
+        try
+        {
+            workbook.setNumber(cell.sheet, cell.y - rowShift, cell.x
+                - columnShift, value.doubleValue());
+
+            RangeStyle rangeStyle = workbook.getRangeStyle(cell.y - rowShift,
+                cell.x - columnShift, cell.y - rowShift, cell.x - columnShift);
+            String formatCode = numberFormatter.getFormatCode();
+            rangeStyle.setCustomFormat(formatCode);
+            workbook.setRangeStyle(rangeStyle, cell.y - rowShift, cell.x
+                - columnShift, cell.y - rowShift, cell.x - columnShift);
+        }
+        catch (Exception e)
+        {
+            exportText(fallbackText, cell);
+        }
     }
 
     protected void exportText(String csCellText, XlsCell cell)
