@@ -17,11 +17,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.SoftReference;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,6 +80,7 @@ import org.eclipse.birt.report.engine.ir.ExtendedItemDesign;
 import org.eclipse.birt.report.engine.ir.ReportItemDesign;
 import org.eclipse.birt.report.engine.ir.TextItemDesign;
 import org.eclipse.birt.report.engine.layout.pdf.util.PropertyUtil;
+import org.eclipse.birt.report.engine.nLayout.area.impl.IGeneratedChartStateProvider;
 import org.eclipse.birt.report.engine.script.internal.OnRenderScriptVisitor;
 import org.eclipse.birt.report.model.api.AutoTextHandle;
 import org.eclipse.birt.report.model.api.DesignElementHandle;
@@ -1133,6 +1139,28 @@ public class LocalizedContentVisitor
 	}
 
 	/**
+	 * Get all interfaces implemented by given type.
+	 * 
+	 * @param cls - Type.
+	 * @param interfaces - Set add interfaces to. 
+	 * @return Interfaces set.
+	 */
+	private Set<Class<?>> interfaces(Class<?> cls, Set<Class<?>> interfaces) {
+		
+		if (cls.isInterface()) {
+			if (!interfaces.add(cls))
+				return interfaces;
+		}
+		
+		for (Class<?> iface : cls.getInterfaces()) 
+		{
+			interfaces(iface, interfaces);
+		}
+		
+		return interfaces;
+	}
+
+	/**
 	 * handle the content created by the IPresentation
 	 * 
 	 * @param item
@@ -1165,6 +1193,8 @@ public class LocalizedContentVisitor
 				Object imageMap = null;
 				byte[] imageContent = new byte[0];
 
+				Object generatedChartState = null;
+
 				Object image = output;
 				if ( type == IReportItemPresentation.OUTPUT_AS_IMAGE_WITH_MAP )
 				{
@@ -1177,6 +1207,10 @@ public class LocalizedContentVisitor
 					if ( imageWithMap.length > 1 )
 					{
 						imageMap = imageWithMap[1];
+					}
+					if ( imageWithMap.length > 2 ) 
+					{
+						generatedChartState = imageWithMap[2];
 					}
 				}
 
@@ -1206,47 +1240,75 @@ public class LocalizedContentVisitor
 				imageObj.setAltText( content.getAltText( ) );
 				imageObj.setAltTextKey( content.getAltTextKey( ) );
 				
-				// put the cached image into cache
-				IHTMLImageHandler imageHandler = context.getImageHandler( );
-				if ( imageHandler != null )
+				if (generatedChartState != null) 
 				{
-					ExtendedItemDesign design = (ExtendedItemDesign) content
-							.getGenerateBy( );
-					ExtendedItemHandle handle = (ExtendedItemHandle) design.getHandle( );
-					IReportItemPresentation itemPresentation = context.getExtendedItemManager( ).createPresentation( handle );
-					// call the presentation peer to create the content object		
-					int resolution = 0;
+					final IImageContent o = imageObj;
+					final Object gcs = generatedChartState;
 					
-					IDataQueryDefinition[] queries = design.getQueries( );
+					Set<Class<?>> iinterfaces = interfaces(o.getClass(), new HashSet<Class<?>>());
 					
-					ReportItemPresentationInfo info = new ReportItemPresentationInfo( );
-					info.setModelObject( handle );
-					info.setApplicationClassLoader( context.getApplicationClassLoader( ) );
-					info.setReportContext( context.getReportContext( ) );
-					info.setReportQueries( queries );
-					resolution = getChartResolution( content );
-					info.setResolution( resolution );
-					info.setExtendedItemContent( content );
-					info.setSupportedImageFormats( getChartFormats( ) );
-					info.setActionHandler( context.getActionHandler( ) );
-					info.setOutputFormat( getOutputFormat( ) );
-
-					itemPresentation.init( info );
+					iinterfaces.add(IGeneratedChartStateProvider.class);
 					
-					if( itemPresentation != null && itemPresentation.isCacheable( ) )
+					imageObj = (IImageContent) Proxy.newProxyInstance(getClass().getClassLoader(), 
+							iinterfaces.toArray(new Class[iinterfaces.size()]),
+							new InvocationHandler() {
+						
+								public Object invoke(Object proxy, Method method, Object[] args)
+										throws Throwable 
+								{
+									if ("getGeneratedChartState".equals(method.getName()))
+									{
+										return gcs;
+									}
+									
+									return method.invoke(o, args);
+								}
+							});
+				}
+				else
+				{
+					// put the cached image into cache
+					IHTMLImageHandler imageHandler = context.getImageHandler( );
+					if ( imageHandler != null )
 					{
-						Image img = new Image( imageObj );
-						img.setRenderOption( context.getRenderOption( ) );
-						img.setReportRunnable( context.getRunnable( ) );
-						img.setImageSize( processImageSize( size ) );
-						String imageId = getImageCacheID( content );
-						CachedImage cachedImage = imageHandler.addCachedImage( imageId, IImage.CUSTOM_IMAGE, img,
-								context.getReportContext( ) );
-						if ( cachedImage != null )
+						ExtendedItemDesign design = (ExtendedItemDesign) content
+								.getGenerateBy( );
+						ExtendedItemHandle handle = (ExtendedItemHandle) design.getHandle( );
+						IReportItemPresentation itemPresentation = context.getExtendedItemManager( ).createPresentation( handle );
+						// call the presentation peer to create the content object		
+						int resolution = 0;
+						
+						IDataQueryDefinition[] queries = design.getQueries( );
+						
+						ReportItemPresentationInfo info = new ReportItemPresentationInfo( );
+						info.setModelObject( handle );
+						info.setApplicationClassLoader( context.getApplicationClassLoader( ) );
+						info.setReportContext( context.getReportContext( ) );
+						info.setReportQueries( queries );
+						resolution = getChartResolution( content );
+						info.setResolution( resolution );
+						info.setExtendedItemContent( content );
+						info.setSupportedImageFormats( getChartFormats( ) );
+						info.setActionHandler( context.getActionHandler( ) );
+						info.setOutputFormat( getOutputFormat( ) );
+	
+						itemPresentation.init( info );
+						
+						if( itemPresentation != null && itemPresentation.isCacheable( ) )
 						{
-							return processCachedImage( content, cachedImage );
-						}
-					}					
+							Image img = new Image( imageObj );
+							img.setRenderOption( context.getRenderOption( ) );
+							img.setReportRunnable( context.getRunnable( ) );
+							img.setImageSize( processImageSize( size ) );
+							String imageId = getImageCacheID( content );
+							CachedImage cachedImage = imageHandler.addCachedImage( imageId, IImage.CUSTOM_IMAGE, img,
+									context.getReportContext( ) );
+							if ( cachedImage != null )
+							{
+								return processCachedImage( content, cachedImage );
+							}
+						}					
+					}
 				}
 
 				// don' have image cache, so handle it as a normal image

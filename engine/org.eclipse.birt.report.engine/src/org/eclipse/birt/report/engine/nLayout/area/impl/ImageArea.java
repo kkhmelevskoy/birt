@@ -35,6 +35,8 @@ public class ImageArea extends AbstractArea implements IImageArea
 
 	protected ArrayList<IImageMap> imageMapDescription;
 
+	private Object generatedChartState;
+
 	public ImageArea( )
 	{
 		super( );
@@ -49,6 +51,7 @@ public class ImageArea extends AbstractArea implements IImageArea
 		this.helpText = area.helpText;
 		this.mimetype = area.mimetype;
 		this.params = area.params;
+		this.generatedChartState = area.generatedChartState;
 	}
 
 	public void setUrl( String url )
@@ -136,6 +139,14 @@ public class ImageArea extends AbstractArea implements IImageArea
 		return imageMapDescription;
 	}
 	
+	public Object getGeneratedChartState() {
+		return generatedChartState;
+	}
+
+	public void setGeneratedChartState(Object generatedChartState) {
+		this.generatedChartState = generatedChartState;
+	}
+
 	static class ImageMap implements IImageMap
 	{
 		int[] vertices;

@@ -594,6 +594,11 @@ public class ImageAreaLayout implements ILayout
 			
 			area.setData( data );
 
+			if (content instanceof IGeneratedChartStateProvider) 
+			{
+				area.setGeneratedChartState(((IGeneratedChartStateProvider) content).getGeneratedChartState());
+			}
+
 			if ( reader.getType( ) == ImageReader.TYPE_SVG_OBJECT )
 			{
 				area.setMIMEType( "image/svg+xml" );

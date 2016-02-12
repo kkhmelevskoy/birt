@@ -28,6 +28,8 @@ public interface IImageArea extends IArea
 	String getExtension( );
 
 	String getMIMEType( );
+
+	Object getGeneratedChartState();
 	
 	HashMap<String, String> getParameters( );
 	

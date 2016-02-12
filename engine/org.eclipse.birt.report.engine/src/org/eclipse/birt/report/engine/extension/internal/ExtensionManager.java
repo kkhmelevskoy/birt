@@ -130,8 +130,8 @@ public class ExtensionManager
 				"org.eclipse.birt.report.engine.emitter.ppt" );
 		format2DefaultEmitterID.put( "pptx",
 				"org.eclipse.birt.report.engine.emitter.pptx" );
-		format2DefaultEmitterID.put( "xls",
-				"org.eclipse.birt.report.engine.emitter.prototype.excel" );
+//		format2DefaultEmitterID.put( "xls",
+//				"org.eclipse.birt.report.engine.emitter.prototype.excel" );
 	}
 
 	protected Map dataExtractionFormats = new HashMap( );

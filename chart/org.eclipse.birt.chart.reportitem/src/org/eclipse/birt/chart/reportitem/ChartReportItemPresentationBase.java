@@ -111,6 +111,8 @@ public class ChartReportItemPresentationBase extends ReportItemPresentationBase 
 
 	protected IDeviceRenderer idr = null;
 
+	private GeneratedChartState generatedChartState;
+
 	protected RunTimeContext rtc = null;
 
 	private static List<String> registeredDevices = null;
@@ -553,6 +555,8 @@ public class ChartReportItemPresentationBase extends ReportItemPresentationBase 
 		{
 			idr.dispose( );
 			idr = null;
+
+			generatedChartState = null;
 		}
 	}
 
@@ -1105,7 +1109,7 @@ public class ChartReportItemPresentationBase extends ReportItemPresentationBase 
 		else if ( getOutputType( ) == OUTPUT_AS_IMAGE_WITH_MAP )
 		{
 			return new Object[]{
-					fis, imageMap
+					fis, imageMap, generatedChartState
 			};
 		}
 		else
@@ -1124,6 +1128,8 @@ public class ChartReportItemPresentationBase extends ReportItemPresentationBase 
 		idr.setProperty( IDeviceRenderer.FILE_IDENTIFIER, bos );
 		idr.setProperty( IDeviceRenderer.UPDATE_NOTIFIER,
 				new EmptyUpdateNotifier( cm, gcs.getChartModel( ) ) );
+
+		generatedChartState = gcs;
 
 		Generator.instance( ).render( idr, gcs );
 
