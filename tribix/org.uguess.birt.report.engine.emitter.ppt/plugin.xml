@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         point="org.eclipse.birt.report.engine.emitters">
+      <emitter
+            class="org.uguess.birt.report.engine.emitter.ppt.PptEmitter"
+            format="ppt"
+            id="org.uguess.birt.report.engine.emitter.ppt"
+            mimeType="application/vnd.ms-powerpoint"
+            pagination="paper-size-pagination"/>
+   </extension>
+
+</plugin>
