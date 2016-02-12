@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="Windows-1251"?>
+<project name="BuildApplications" default="buildMain" basedir=".">
+	<property name="base.dir" value=".." />
+	<property name="javac.executable" value="" />
+	<property name="allprojectdeploy.dir" value="${base.dir}/allprojectdeploy" />
+	<property name="export.dir" value="" />
+	<property name="birt.lib.dir" value="" />
+
+	<target description="Компилирование org.uguess.birt.report.engine.common" name="Build_org.uguess.birt.report.engine.common">
+		<ant antfile="buildBirtProject.xml" target="buildProject">
+			<property name="base.dir" value="${base.dir}" />
+			<property name="javac.executable" value="${javac.executable}" />
+			<property name="project.dir" value="${base.dir}/org.uguess.birt.report.engine.common" />
+			<property name="project.identifier" value="org.uguess.birt.report.engine.common" />
+			<property name="allprojectdeploy.dir" value="${allprojectdeploy.dir}" />
+			<property name="export.dir" value="${export.dir}" />
+			<property name="export" value="true" />
+		</ant>
+	</target>
+
+	<target description="Компилирование org.uguess.birt.report.engine.emitter.xls" name="Build_org.uguess.birt.report.engine.emitter.xls">
+		<ant antfile="buildBirtProject.xml" target="buildProject">
+			<property name="base.dir" value="${base.dir}" />
+			<property name="javac.executable" value="${javac.executable}" />
+			<property name="project.dir" value="${base.dir}/org.uguess.birt.report.engine.emitter.xls" />
+			<!--<property name="project.identifier" value="org.uguess.birt.report.engine.emitter.xls" />-->
+			<property name="project.identifier" value="xls-emitter" />
+			<property name="allprojectdeploy.dir" value="${allprojectdeploy.dir}" />
+			<property name="export.dir" value="${export.dir}" />
+			<property name="export" value="true" />
+		</ant>
+	</target>
+	
+	<target depends="Build_org.uguess.birt.report.engine.common,
+		             Build_org.uguess.birt.report.engine.emitter.xls" name="buildProjects">
+	</target>
+
+	<target name="buildMain">
+		<delete dir="${allprojectdeploy.dir}" />
+		<mkdir dir="${allprojectdeploy.dir}" />
+		<antcall target="buildProjects" />
+	</target>
+
+</project>

@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Common Engine Plug-in
+Bundle-SymbolicName: org.uguess.birt.report.engine.common;singleton:=true
+Bundle-Version: 2.5.2.qualifier
+Require-Bundle: org.eclipse.birt.report.engine;visibility:=reexport
+Export-Package: org.uguess.birt.report.engine.layout.wrapper,
+ org.uguess.birt.report.engine.layout.wrapper.impl,
+ org.uguess.birt.report.engine.util
+Bundle-Vendor: Uguess.org
+Bundle-ActivationPolicy: lazy

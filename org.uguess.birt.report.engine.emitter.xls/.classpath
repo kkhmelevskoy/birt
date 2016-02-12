@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="lib/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
+	<classpathentry kind="lib" path="lib/commons-jexl-1.1.jar" sourcepath="D:/Libz/commons-jexl-1.1-src/src/java"/>
+	<classpathentry kind="lib" path="lib/SX.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/org.eclipse.birt.chart.reportitem"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

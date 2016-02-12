@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Rtf Emitter Plug-in for BIRT
+Bundle-SymbolicName: org.uguess.birt.report.engine.emitter.rtf;singleton:=true
+Bundle-Version: 2.5.2.qualifier
+Bundle-Activator: org.uguess.birt.report.engine.emitter.rtf.Activator
+Require-Bundle: org.eclipse.core.runtime,
+ org.uguess.birt.report.engine.common
+Eclipse-LazyStart: true
+Bundle-Vendor: Uguess.org
+Bundle-ClassPath: .
