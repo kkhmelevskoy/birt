@@ -32,6 +32,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -175,6 +176,7 @@ import org.uguess.birt.report.engine.spreadsheet.model.MergeBlock;
 import org.uguess.birt.report.engine.spreadsheet.model.Sheet;
 import org.uguess.birt.report.engine.spreadsheet.wrapper.Coordinate;
 import org.uguess.birt.report.engine.spreadsheet.wrapper.Transformer;
+import org.uguess.birt.report.engine.util.BuildVersion;
 import org.uguess.birt.report.engine.util.EngineUtil;
 import org.uguess.birt.report.engine.util.ImageUtil;
 import org.uguess.birt.report.engine.util.OptionParser;
@@ -255,6 +257,9 @@ public class XlsRenderer implements IAreaVisitor
     private List<Map<String, Coordinate>> tableCoords = new ArrayList<Map<String, Coordinate>>();
 
     private HashMap<String, NumberFormatter> numberFormatters = new HashMap<String, NumberFormatter>();
+
+    private long startTime;
+    private long endTime;
 
     public XlsRenderer(String format)
     {
@@ -679,6 +684,8 @@ public class XlsRenderer implements IAreaVisitor
 
     public void start(IReportContent rc)
     {
+        startTime = System.currentTimeMillis();
+
         reset();
         
         if (DEBUG)
@@ -765,8 +772,12 @@ public class XlsRenderer implements IAreaVisitor
             }
         }
 
+        endTime = System.currentTimeMillis();
+
         try
         {
+            exportEmitterSheet();
+
             workbook.setSheet(0); // activate first sheet in report
 
             if (XLSX_IDENTIFIER.equals(format))
@@ -795,6 +806,37 @@ public class XlsRenderer implements IAreaVisitor
             System.out.println("------------total exporting time using: " //$NON-NLS-1$
                 + (System.currentTimeMillis() - timeCounter) + " ms"); //$NON-NLS-1$
         }
+    }
+
+    private void exportEmitterSheet() throws Exception
+    {
+        int row = -1;
+        int sheetIndex = workbook.getNumSheets();
+
+        workbook.insertSheets(sheetIndex, 1);
+        workbook.setSheet(sheetIndex);
+        workbook.setSheetName(sheetIndex, "Emitter Info");
+
+        row++;
+        workbook.setText(row, 0, "Build version");
+        workbook.setText(row, 1, BuildVersion.BUILD_VERSION);
+
+        row++;
+        workbook.setText(row, 0, "Export start");
+        workbook.setText(row, 1, new Date(startTime).toString());
+
+        row++;
+        workbook.setText(row, 0, "Export end");
+        workbook.setText(row, 1, new Date(endTime).toString());
+
+        row++;
+        workbook.setText(row, 0, "Time in seconds");
+        workbook.setText(row, 1,
+            Double.toString((double) (endTime - startTime) / 1000d));
+        
+        workbook.setColWidthAutoSize(0, true);
+        
+        workbook.setSheetHidden(WorkBook.SheetStateVeryHidden);
     }
 
     protected void reset()

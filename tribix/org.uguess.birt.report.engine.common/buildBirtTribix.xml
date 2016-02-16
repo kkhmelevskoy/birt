@@ -6,7 +6,33 @@
 	<property name="export.dir" value="" />
 	<property name="birt.lib.dir" value="" />
 
+	<property name="property.file" value="${base.dir}/org.uguess.birt.report.engine.common/src/org/uguess/birt/report/engine/util/BuildVersion.java" />
+
+    <target name="insert-build-version" if="build.version">
+        <tstamp>
+            <format property="build.date" pattern="dd-MM-yyyy HH:mm:ss" />
+        </tstamp>
+        <copy file="${property.file}" tofile="${property.file}.bak" overwrite="yes">
+            <filterchain>
+                <filterreader classname="org.apache.tools.ant.filters.ReplaceTokens">
+                    <param type="token" name="BUILD_VERSION" value="${build.version} ${build.date}" />
+                </filterreader>
+            </filterchain>
+        </copy>
+        <copy file="${property.file}" tofile="${property.file}.old" overwrite="yes" />
+        <copy file="${property.file}.bak" tofile="${property.file}" overwrite="yes" />
+        <delete file="${property.file}.bak" />
+    </target>
+
+    <!-- возвращение в исходное состояние -->
+    <target name="revert-build-version" if="build.version">
+        <copy file="${property.file}.old" tofile="${property.file}" overwrite="yes" />
+        <delete file="${property.file}.old" />
+    </target>
+
 	<target description="Компилирование org.uguess.birt.report.engine.common" name="Build_org.uguess.birt.report.engine.common">
+		<antcall target="insert-build-version" />
+
 		<ant antfile="buildBirtProject.xml" target="buildProject">
 			<property name="base.dir" value="${base.dir}" />
 			<property name="javac.executable" value="${javac.executable}" />
@@ -16,6 +42,8 @@
 			<property name="export.dir" value="${export.dir}" />
 			<property name="export" value="true" />
 		</ant>
+
+		<antcall target="revert-build-version" />
 	</target>
 
 	<target description="Компилирование org.uguess.birt.report.engine.emitter.xls" name="Build_org.uguess.birt.report.engine.emitter.xls">
