@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.uguess.birt.report.engine.layout.wrapper.Style;
@@ -479,10 +480,11 @@ public class SheetImpl extends BlockImpl implements Sheet
     {
         return merges.iterator();
     }
-
-    public Coordinate getTableCoord(String name)
+    
+    @Override
+    public Map<String, Coordinate> getTableCoords()
     {
-        return tableCoordMap.get(name);
+        return tableCoordMap;
     }
     
     public void addTableCoord(String name, Coordinate coord)

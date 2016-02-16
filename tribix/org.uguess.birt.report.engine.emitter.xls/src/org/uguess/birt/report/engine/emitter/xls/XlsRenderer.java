@@ -248,11 +248,11 @@ public class XlsRenderer implements IAreaVisitor
 
     private ChartUtil.CacheDateFormat cacheDateFormat;
 
-    private ArrayList<Sheet> modelSheets = new ArrayList<Sheet>();
-
     private short rowShift;
     private short columnShift;
     private String format;
+
+    private List<Map<String, Coordinate>> tableCoords = new ArrayList<Map<String, Coordinate>>();
 
     private HashMap<String, NumberFormatter> numberFormatters = new HashMap<String, NumberFormatter>();
 
@@ -679,11 +679,8 @@ public class XlsRenderer implements IAreaVisitor
 
     public void start(IReportContent rc)
     {
-        chartCells.clear();
-        chartStates.clear();
-        modelSheets.clear();
-        doneCharts.clear();
-
+        reset();
+        
         if (DEBUG)
         {
             timeCounter = System.currentTimeMillis();
@@ -701,48 +698,6 @@ public class XlsRenderer implements IAreaVisitor
         currentPageIndex = 1;
 
         baseCharWidth = 7 * 72d / dpi;
-
-        // Font bookFont = null;
-        //
-        // if ( workbook.getNumberOfFonts( ) > 0 )
-        // {
-        // HSSFFont font = workbook.getFontAt( (short) 0 );
-        //
-        // bookFont = new Font( font.getFontName( ),
-        // Font.PLAIN,
-        // font.getFontHeightInPoints( ) );
-        // }
-        // else
-        // {
-        // bookFont = new Font( "Serif", Font.PLAIN, 10 ); //$NON-NLS-1$
-        // }
-        //
-        // Graphics2D g2d = null;
-        //
-        // try
-        // {
-        // BufferedImage bi = new BufferedImage( 1,
-        // 1,
-        // BufferedImage.TYPE_INT_ARGB );
-        // g2d = (Graphics2D) bi.getGraphics( );
-        // FontMetrics fm = g2d.getFontMetrics( bookFont );
-        // double charWidth = fm.charWidth( '0' );
-        //
-        // baseCharWidth = charWidth;// * dpi / 72d;
-        //
-        // bi.flush( );
-        // }
-        // catch ( Exception e )
-        // {
-        // baseCharWidth = 6;// * dpi / 72d;
-        // }
-        // finally
-        // {
-        // if ( g2d != null )
-        // {
-        // g2d.dispose( );
-        // }
-        // }
 
         processor = new XlsStyleProcessor(workbook);
     }
@@ -833,22 +788,31 @@ public class XlsRenderer implements IAreaVisitor
             e.printStackTrace();
         }
 
-        frameStack.clear();
-
-        processor.dispose();
-        processor = null;
-
-        workbook = null;
-        frameStack = null;
-        singleContainer = null;
-
-        numberFormatters.clear();
+        reset();
 
         if (DEBUG)
         {
             System.out.println("------------total exporting time using: " //$NON-NLS-1$
                 + (System.currentTimeMillis() - timeCounter) + " ms"); //$NON-NLS-1$
         }
+    }
+
+    protected void reset()
+    {
+        chartCells.clear();
+        chartStates.clear();
+        doneCharts.clear();
+        tableCoords.clear();
+        numberFormatters.clear();
+        
+        frameStack = null;
+        processor = null;
+        workbook = null;
+        frameStack = null;
+        singleContainer = null;
+        contentCache = null;
+        totalCells = null;
+        totalPageAreas = null;
     }
 
     public void startContainer(IContainerArea container)
@@ -1135,7 +1099,7 @@ public class XlsRenderer implements IAreaVisitor
     private void doExportSheet(Sheet modelSheet, boolean landscape,
         IPageContent content) throws Exception
     {
-        modelSheets.add(modelSheet);
+        tableCoords.add(modelSheet.getTableCoords());
 
         if (++sheetNum > 0)
         {
@@ -1975,10 +1939,8 @@ public class XlsRenderer implements IAreaVisitor
 
                         if (chartDataSource != null)
                         {
-                            Sheet sheet = modelSheets.get(cell.sheet);
-
-                            Coordinate tableCoord = sheet
-                                .getTableCoord(chartDataSource);
+                            Coordinate tableCoord = tableCoords.get(cell.sheet)
+                                .get(chartDataSource);
                             Coordinate dataCoord = null;
 
                             if (tableCoord != null)
@@ -2998,7 +2960,7 @@ public class XlsRenderer implements IAreaVisitor
 
     private static Object getFieldAsPublic(Object obj, Class<?> clazz,
         String field) throws SecurityException, NoSuchFieldException,
-        IllegalArgumentException, IllegalAccessException
+            IllegalArgumentException, IllegalAccessException
     {
         Field f = clazz.getDeclaredField(field);
         f.setAccessible(true);
@@ -3088,7 +3050,7 @@ public class XlsRenderer implements IAreaVisitor
      */
     private boolean isChartNeedExtraDataSheet(WorkBook workbook, XlsCell cell,
         GeneratedChartState generatedChartState)
-        throws IllegalArgumentException, ChartException
+            throws IllegalArgumentException, ChartException
     {
         Chart chartModel = generatedChartState.getChartModel();
         ChartWithAxes chartWithAxes = (ChartWithAxes) chartModel;
@@ -3130,10 +3092,8 @@ public class XlsRenderer implements IAreaVisitor
 
                     if (chartDataSource != null)
                     {
-                        Sheet sheet = modelSheets.get(cell.sheet);
-
-                        Coordinate tableCoord = sheet
-                            .getTableCoord(chartDataSource);
+                        Coordinate tableCoord = tableCoords.get(cell.sheet)
+                            .get(chartDataSource);
 
                         if (tableCoord != null)
                         {

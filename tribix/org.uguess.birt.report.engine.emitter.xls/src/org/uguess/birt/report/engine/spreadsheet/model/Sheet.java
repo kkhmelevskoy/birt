@@ -17,6 +17,7 @@ package org.uguess.birt.report.engine.spreadsheet.model;
 
 
 import java.util.Iterator;
+import java.util.Map;
 
 import org.uguess.birt.report.engine.layout.wrapper.Style;
 import org.uguess.birt.report.engine.spreadsheet.wrapper.Coordinate;
@@ -211,7 +212,7 @@ public interface Sheet extends Block
      */
     Iterator<MergeBlock> mergesIterator();
     
-    Coordinate getTableCoord(String name);
+    Map<String, Coordinate> getTableCoords();
     
     void addTableCoord(String name, Coordinate coord);
 }

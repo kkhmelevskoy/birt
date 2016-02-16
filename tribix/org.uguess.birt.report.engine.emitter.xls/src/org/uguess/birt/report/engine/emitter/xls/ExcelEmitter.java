@@ -18,6 +18,7 @@ package org.uguess.birt.report.engine.emitter.xls;
 
 import java.util.Map;
 
+import org.eclipse.birt.core.exception.BirtException;
 import org.eclipse.birt.report.engine.api.IRenderOption;
 import org.eclipse.birt.report.engine.content.IAutoTextContent;
 import org.eclipse.birt.report.engine.content.IContent;
@@ -152,6 +153,19 @@ public abstract class ExcelEmitter extends ContentEmitterAdapter
             pageArea.accept(renderer);
         }
 
+    }
+    
+    @Override
+    public void endPage(IPageContent page) throws BirtException
+    {
+        super.endPage(page);
+
+        if (!singlePageMode)
+        {
+            builder.reset();
+        }
+
+        renderer.contentCache = null;
     }
 
     /*

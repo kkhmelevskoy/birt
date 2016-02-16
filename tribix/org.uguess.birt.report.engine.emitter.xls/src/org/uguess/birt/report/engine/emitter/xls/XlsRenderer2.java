@@ -61,34 +61,6 @@ public class XlsRenderer2 extends XlsRenderer
     }
 
     @Override
-    public void start(IReportContent rc)
-    {
-        super.start(rc);
-
-        frameCache = new HashMap<IContent, MultiAreaFrame>();
-        areaStack = new Stack<IArea>();
-        clipStack = new Stack<IArea>();
-        bodyArea = null;
-    }
-
-    @Override
-    public void end(IReportContent rc)
-    {
-        super.end(rc);
-
-        frameCache.clear();
-        frameCache = null;
-
-        areaStack.clear();
-        areaStack = null;
-
-        clipStack.clear();
-        clipStack = null;
-
-        bodyArea = null;
-    }
-
-    @Override
     public void startContainer(IContainerArea container)
     {
         if (container.needClip())
@@ -131,6 +103,17 @@ public class XlsRenderer2 extends XlsRenderer
             // clean up pagewise frame cache
             frameCache.clear();
         }
+    }
+
+    @Override
+    protected void reset()
+    {
+        super.reset();
+
+        frameCache = new HashMap<IContent, MultiAreaFrame>();
+        areaStack = new Stack<IArea>();
+        clipStack = new Stack<IArea>();
+        bodyArea = null;
     }
 
     @Override
